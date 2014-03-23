@@ -15,22 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// macros
-
-#ifndef DEBUG
-#  define NDEBUG
-#endif
-
 // C includes
-
 #include <cassert> // needs NDEBUG
-#include <cctype>
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
 
 // C++ includes
-
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -38,38 +30,15 @@
 #include <vector>
 
 // C++11 includes
-
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
 
-// macros
-
-#ifdef _MSC_VER
-#  define I64(n) (n##i64)
-#  define U64(u) (u##ui64)
-#else
-#  define I64(n) (n##LL)
-#  define U64(u) (u##ULL)
-#endif
-
 // types
 
-typedef signed   char int8;
-typedef unsigned char uint8;
-
-typedef signed   short int int16;
-typedef unsigned short int uint16;
-
-typedef signed   int int32;
-typedef unsigned int uint32;
-
-typedef signed   long long int int64;
-typedef unsigned long long int uint64;
-
-typedef uint64 bit_t;
-typedef uint64 hash_t; // key_t is used by Unix :(
+typedef uint64_t bit_t;
+typedef uint64_t hash_t; // key_t is used by Unix :(
 
 // modules
 
@@ -81,20 +50,19 @@ class Timer
 
 private:
 
-	typedef std::chrono::time_point<std::chrono::system_clock> time_t;
-	typedef std::chrono::duration<int, std::ratio<1, 1000>> millisecond_t;
+	typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_t;
 
 	int p_elapsed;
 	bool p_running;
 	time_t p_start;
 
 	static time_t now() {
-		return std::chrono::system_clock::now();
+		return std::chrono::high_resolution_clock::now();
 	}
 
 	int time() const {
 		assert(p_running);
-		return std::chrono::duration_cast<millisecond_t>(now() - p_start).count();
+		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - p_start).count();
 	}
 
 public:
@@ -165,28 +133,6 @@ int round(double x)
 	return int(std::floor(x + 0.5));
 }
 
-int div(int a, int b)
-{
-
-	assert(b > 0);
-
-	int div = a / b;
-	if (a < 0 && a != b * div) div--; // fix buggy C semantics
-
-	return div;
-}
-
-int sqrt(int n)
-{
-	return int(std::sqrt(double(n)));
-}
-
-bool is_square(int n)
-{
-	int i = sqrt(n);
-	return i * i == n;
-}
-
 double rand_float()
 {
 	return double(std::rand()) / (double(RAND_MAX) + 1.0);
@@ -198,55 +144,9 @@ int rand_int(int n)
 	return int(rand_float() * double(n));
 }
 
-int string_find(const std::string & s, char c)
-{
-	return int(s.find(c));
-}
-
-bool string_case_equal(const std::string & s0, const std::string & s1)
-{
-
-	if (s0.size() != s1.size()) return false;
-
-	for (int i = 0; i < int(s0.size()); i++) {
-		if (std::tolower(s0[i]) != std::tolower(s1[i])) return false;
-	}
-
-	return true;
-}
-
 bool to_bool(const std::string & s)
 {
-	if (string_case_equal(s, "true")) {
-		return true;
-	} else if (string_case_equal(s, "false")) {
-		return false;
-	} else {
-		std::cerr << "not a boolean: \"" << s << "\"" << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-}
-
-int64 to_int(const std::string & s)
-{
-	std::stringstream ss(s);
-	int64 n;
-	ss >> n;
-	return n;
-}
-
-std::string to_string(int n)
-{
-	std::stringstream ss;
-	ss << n;
-	return ss.str();
-}
-
-std::string to_string(double x)
-{
-	std::stringstream ss;
-	ss << x;
-	return ss.str();
+	return s == "true" ? true : false;
 }
 
 void log(const std::string & s)
@@ -359,10 +259,7 @@ namespace side
 
 const int SIZE = 2;
 
-enum {
-	WHITE,
-	BLACK,
-};
+enum {WHITE, BLACK};
 
 int opposit(int sd)
 {
@@ -378,27 +275,8 @@ const int FILE_SIZE = 8;
 const int RANK_SIZE = 8;
 const int SIZE = FILE_SIZE * RANK_SIZE;
 
-enum {
-	FILE_A,
-	FILE_B,
-	FILE_C,
-	FILE_D,
-	FILE_E,
-	FILE_F,
-	FILE_G,
-	FILE_H,
-};
-
-enum {
-	RANK_1,
-	RANK_2,
-	RANK_3,
-	RANK_4,
-	RANK_5,
-	RANK_6,
-	RANK_7,
-	RANK_8,
-};
+enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
+enum {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
 
 enum {
 	NONE = -1,
@@ -415,26 +293,19 @@ enum {
 enum {
 	INC_LEFT  = -8,
 	INC_RIGHT = +8,
+	CASTLING_DELTA = 16,
+	DOUBLE_PAWN_DELTA = 2,
 };
-
-const int CASTLING_DELTA = 16;
-const int DOUBLE_PAWN_DELTA = 2;
 
 int make(int fl, int rk)
 {
-
-	assert(fl < 8);
-	assert(rk < 8);
-
+	assert(fl < 8 && rk < 8);
 	return (fl << 3) | rk;
 }
 
 int make(int fl, int rk, int sd)
 {
-
-	assert(fl < 8);
-	assert(rk < 8);
-
+	assert(fl < 8 && rk < 8);
 	return make(fl, (rk ^ -sd) & 7);
 }
 
@@ -544,11 +415,9 @@ int from_string(const std::string & s)
 
 std::string to_string(int sq)
 {
-
 	std::string s;
 	s += 'a' + file(sq);
 	s += '1' + rank(sq);
-
 	return s;
 }
 
@@ -559,10 +428,7 @@ namespace wing
 
 const int SIZE = 2;
 
-enum {
-	KING,
-	QUEEN,
-};
+enum {KING, QUEEN};
 
 const int shelter_file[SIZE] = { square::FILE_G, square::FILE_B }; // for pawn-shelter eval
 
@@ -574,29 +440,15 @@ namespace piece
 const int SIZE = 7;
 const int SIDE_SIZE = 12;
 
-enum Piece {
-	PAWN,
-	KNIGHT,
-	BISHOP,
-	ROOK,
-	QUEEN,
-	KING,
-	NONE,
-};
+enum Piece {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE};
 
 enum Side_Piece {
-	WHITE_PAWN,
-	BLACK_PAWN,
-	WHITE_KNIGHT,
-	BLACK_KNIGHT,
-	WHITE_BISHOP,
-	BLACK_BISHOP,
-	WHITE_ROOK,
-	BLACK_ROOK,
-	WHITE_QUEEN,
-	BLACK_QUEEN,
-	WHITE_KING,
-	BLACK_KING,
+	WHITE_PAWN, BLACK_PAWN,
+	WHITE_KNIGHT, BLACK_KNIGHT,
+	WHITE_BISHOP, BLACK_BISHOP,
+	WHITE_ROOK, BLACK_ROOK,
+	WHITE_QUEEN, BLACK_QUEEN,
+	WHITE_KING, BLACK_KING
 };
 
 const int PAWN_VALUE   = 100;
@@ -663,7 +515,7 @@ int side(int p12)
 
 int from_char(char c)
 {
-	return util::string_find(Char, c);
+	return Char.find(c);
 }
 
 char to_char(int pc)
@@ -674,7 +526,7 @@ char to_char(int pc)
 
 int from_fen(char c)
 {
-	return util::string_find(Fen_Char, c);
+	return Fen_Char.find(c);
 }
 
 char to_fen(int p12)
@@ -808,7 +660,7 @@ bit_t p_side_rear[side::SIZE][8];
 bit_t bit(int n)
 {
 	assert(n < 64);
-	return U64(1) << n;
+	return 1ULL << n;
 }
 
 void set(bit_t & b, int n)
@@ -828,24 +680,7 @@ bool is_set(bit_t b, int n)
 
 int first(bit_t b)
 {
-
 	assert(b != 0);
-
-	/*
-	   static const int index[64] = {
-	       0,  1,  2,  7,  3, 13,  8, 19,
-	       4, 25, 14, 28,  9, 34, 20, 40,
-	       5, 17, 26, 38, 15, 46, 29, 48,
-	      10, 31, 35, 54, 21, 50, 41, 57,
-	      63,  6, 12, 18, 24, 27, 33, 39,
-	      16, 37, 45, 47, 30, 53, 49, 56,
-	      62, 11, 23, 32, 36, 44, 52, 55,
-	      61, 22, 43, 51, 60, 42, 59, 58,
-	   };
-
-	   return index[((b & -b) * U64(0x218A392CD3D5DBF)) >> (64 - 6)];
-	*/
-
 	return __builtin_ctzll(b); // GCC
 }
 
@@ -857,30 +692,11 @@ bit_t rest(bit_t b)
 
 int count(bit_t b)
 {
-
-	/*
-	   b = b - ((b >> 1) & U64(0x5555555555555555));
-	   b = (b & U64(0x3333333333333333)) + ((b >> 2) & U64(0x3333333333333333));
-	   b = (b + (b >> 4)) & U64(0x0F0F0F0F0F0F0F0F);
-	   return (b * U64(0x0101010101010101)) >> 56;
-	*/
-
 	return __builtin_popcountll(b); // GCC
 }
 
 int count_loop(bit_t b)
 {
-
-	/*
-	   int n = 0;
-
-	   for (; b != 0; b = rest(b)) {
-	      n++;
-	   }
-
-	   return n;
-	*/
-
 	return __builtin_popcountll(b); // GCC
 }
 
@@ -893,13 +709,13 @@ bool single(bit_t b)
 bit_t file(int fl)
 {
 	assert(fl < 8);
-	return U64(0xFF) << (fl * 8);
+	return 0xFFULL << (fl * 8);
 }
 
 bit_t rank(int rk)
 {
 	assert(rk < 8);
-	return U64(0x0101010101010101) << rk;
+	return 0x0101010101010101ULL << rk;
 }
 
 bit_t files(int fl)
@@ -1036,14 +852,14 @@ hash_t en_passant_key(int sq)
 	return (sq == square::NONE) ? 0 : rand_key(EN_PASSANT + square::file(sq));
 }
 
-int64 index(hash_t key)
+int64_t index(hash_t key)
 {
-	return int64(key);
+	return int64_t(key);
 }
 
-uint32 lock(hash_t key)
+uint32_t lock(hash_t key)
 {
-	return uint32(key >> 32);
+	return uint32_t(key >> 32);
 }
 
 void init()
@@ -1493,7 +1309,7 @@ public:
 
 		p_all = p_side[side::WHITE] | p_side[side::BLACK];
 
-#ifdef DEBUG
+#ifndef NDEBUG
 
 		for (int p12 = 0; p12 < piece::SIDE_SIZE; p12++) {
 			assert(p_count[p12] == bit::count(piece(piece::piece(p12), piece::side(p12))));
@@ -1584,7 +1400,7 @@ public:
 
 		if (pos < int(s.size())) {
 
-			p_turn = util::string_find("wb", s[pos++]);
+			p_turn = std::string("wb").find(s[pos++]);
 
 			if (pos < int(s.size())) {
 				assert(s[pos] == ' ');
@@ -1606,7 +1422,7 @@ public:
 				if (c == ' ') break;
 				if (c == '-') continue;
 
-				int index = util::string_find("KQkq", c);
+				int index = std::string("KQkq").find(c);
 
 				if (can_castle(index)) {
 					castling::set_flag(p_copy.flags, index);
@@ -2396,13 +2212,13 @@ private:
 	static const int SIZE = 256;
 
 	int p_size;
-	uint32 p_pair[SIZE];
+	uint32_t p_pair[SIZE];
 
 	void move_to(int pf, int pt) {
 
 		assert(pt <= pf && pf < p_size);
 
-		uint32 p = p_pair[pf];
+		uint32_t p = p_pair[pf];
 
 		for (int i = pf; i > pt; i--) {
 			p_pair[i] = p_pair[i - 1];
@@ -2411,12 +2227,12 @@ private:
 		p_pair[pt] = p;
 	}
 
-	void add_pair(uint32 p) {
+	void add_pair(uint32_t p) {
 		assert(p_size < SIZE);
 		p_pair[p_size++] = p;
 	}
 
-	uint32 pair(int pos) const {
+	uint32_t pair(int pos) const {
 		assert(pos < p_size);
 		return p_pair[pos];
 	}
@@ -2432,7 +2248,7 @@ public:
 		clear();
 
 		for (int pos = 0; pos < ml.size(); pos++) {
-			uint32 p = ml.pair(pos);
+			uint32_t p = ml.pair(pos);
 			add_pair(p);
 		}
 	}
@@ -2463,7 +2279,7 @@ public:
 
 		for (int i = 1; i < p_size; i++) {
 
-			uint32 p = p_pair[i];
+			uint32_t p = p_pair[i];
 
 			int j;
 
@@ -3175,14 +2991,14 @@ namespace trans
 {
 
 struct Entry { // 16 bytes
-	uint32 lock;
-	uint32 move; // TODO: uint16 #
-	uint16 pad_1;
-	int16 score;
-	uint8 date;
-	int8 depth;
-	uint8 flags;
-	uint8 pad_2;
+	uint32_t lock;
+	uint32_t move; // TODO: uint16_t #
+	uint16_t pad_1;
+	int16_t score;
+	uint8_t date;
+	int8_t depth;
+	uint8_t flags;
+	uint8_t pad_2;
 };
 
 void clear_entry(Entry & entry)
@@ -3207,17 +3023,17 @@ private:
 
 	Entry * p_table;
 	int p_bits;
-	uint64 p_size;
-	uint64 p_mask;
+	uint64_t p_size;
+	uint64_t p_mask;
 
 	int p_date;
-	uint64 p_used;
+	uint64_t p_used;
 
 	int size_to_bits(int size) {
 
 		int bits = 0;
 
-		for (uint64 entries = (uint64(size) << 20) / sizeof(Entry); entries > 1; entries /= 2) {
+		for (uint64_t entries = (uint64_t(size) << 20) / sizeof(Entry); entries > 1; entries /= 2) {
 			bits++;
 		}
 
@@ -3243,7 +3059,7 @@ public:
 		if (bits == p_bits) return;
 
 		p_bits = bits;
-		p_size = U64(1) << bits;
+		p_size = 1ULL << bits;
 		p_mask = p_size - 1;
 
 		if (p_table != NULL) {
@@ -3269,7 +3085,7 @@ public:
 		Entry e;
 		clear_entry(e);
 
-		for (uint64 i = 0; i < p_size; i++) {
+		for (uint64_t i = 0; i < p_size; i++) {
 			p_table[i] = e;
 		}
 
@@ -3290,15 +3106,15 @@ public:
 
 		score = score::to_trans(score, ply);
 
-		uint64 index = hash::index(key) & p_mask;
-		uint32 lock  = hash::lock(key);
+		uint64_t index = hash::index(key) & p_mask;
+		uint32_t lock  = hash::lock(key);
 
 		Entry * be = NULL;
 		int bs = -1;
 
-		for (uint64 i = 0; i < 4; i++) {
+		for (uint64_t i = 0; i < 4; i++) {
 
-			uint64 idx = (index + i) & p_mask;
+			uint64_t idx = (index + i) & p_mask;
 			assert(idx < p_size);
 			Entry & entry = p_table[idx];
 
@@ -3347,12 +3163,12 @@ public:
 
 		assert(depth >= 0 && depth < 100);
 
-		uint64 index = hash::index(key) & p_mask;
-		uint32 lock  = hash::lock(key);
+		uint64_t index = hash::index(key) & p_mask;
+		uint32_t lock  = hash::lock(key);
 
-		for (uint64 i = 0; i < 4; i++) {
+		for (uint64_t i = 0; i < 4; i++) {
 
-			uint64 idx = (index + i) & p_mask;
+			uint64_t idx = (index + i) & p_mask;
 			assert(idx < p_size);
 			Entry & entry = p_table[idx];
 
@@ -4485,16 +4301,16 @@ namespace pawn
 {
 
 struct Info { // 80 bytes; TODO: merge some bitboards and/or file info?
-	int8 open[square::FILE_SIZE][side::SIZE];
-	uint8 shelter[square::FILE_SIZE][side::SIZE];
+	int8_t open[square::FILE_SIZE][side::SIZE];
+	uint8_t shelter[square::FILE_SIZE][side::SIZE];
 	bit_t passed;
 	bit_t target[side::SIZE];
 	bit_t safe;
-	uint32 lock;
-	int16 mg;
-	int16 eg;
-	int8 left_file;
-	int8 right_file;
+	uint32_t lock;
+	int16_t mg;
+	int16_t eg;
+	int8_t left_file;
+	int8_t right_file;
 };
 
 void clear_info (Info & info);
@@ -4534,7 +4350,7 @@ public:
 		hash_t key = bd.pawn_key();
 
 		int    index = hash::index(key) & MASK;
-		uint32 lock  = hash::lock(key);
+		uint32_t lock  = hash::lock(key);
 
 		Info & entry = p_table[index];
 
@@ -4631,7 +4447,7 @@ bool is_weak(int sq, int sd, const board::Board & bd)
 	int fl = square::file(sq);
 	int rk = square::rank(sq, sd);
 
-	uint64 pawns = bd.piece(piece::PAWN, sd);
+	uint64_t pawns = bd.piece(piece::PAWN, sd);
 	int inc = square::pawn_inc(sd);
 
 	// already fine?
@@ -4895,7 +4711,7 @@ namespace eval
 int comp_eval (const board::Board & bd, pawn::Table & pawn_table);
 
 struct Entry {
-	uint32 lock;
+	uint32_t lock;
 	int eval;
 };
 
@@ -4924,7 +4740,7 @@ public:
 		hash_t key = bd.eval_key();
 
 		int    index = hash::index(key) & MASK;
-		uint32 lock  = hash::lock(key);
+		uint32_t lock  = hash::lock(key);
 
 		Entry & entry = p_table[index];
 
@@ -5813,14 +5629,14 @@ struct Time {
 	bool node_limited;
 	bool time_limited;
 	int depth_limit;
-	int64 node_limit;
-	int64 time_limit;
+	int64_t node_limit;
+	int64_t time_limit;
 	bool smart;
 	bool ponder;
 	bool flag;
-	int64 limit_0;
-	int64 limit_1;
-	int64 limit_2;
+	int64_t limit_0;
+	int64_t limit_1;
+	int64_t limit_2;
 	int last_score;
 	bool drop;
 	util::Timer timer;
@@ -5830,7 +5646,7 @@ struct Current {
 
 	int depth;
 	int max_ply;
-	int64 node;
+	int64_t node;
 	int time;
 	int speed;
 
@@ -6106,7 +5922,7 @@ public:
 	pawn::Table pawn_table;
 	eval::Table eval_table;
 
-	int64 volatile node;
+	int64_t volatile node;
 	int volatile max_ply;
 
 	Split_Point msp_stack[16];
@@ -6137,13 +5953,13 @@ void set_depth_limit(int depth)
 	p_time.depth_limit = depth;
 }
 
-void set_node_limit(int64 node)
+void set_node_limit(int64_t node)
 {
 	p_time.node_limited = true;
 	p_time.node_limit = node;
 }
 
-void set_time_limit(int64 time)
+void set_time_limit(int64_t time)
 {
 	p_time.time_limited = true;
 	p_time.time_limit = time;
@@ -6184,7 +6000,7 @@ void clear()
 void update_current()
 {
 
-	int64 node = 0;
+	int64_t node = 0;
 	int max_ply = 0;
 
 	for (int id = 0; id < engine::engine.threads; id++) {
@@ -7362,22 +7178,22 @@ void search_dumb(const board::Board & bd)
 	search_go(bd);
 }
 
-void search_smart(const board::Board & bd, int moves, int64 time, int64 inc)
+void search_smart(const board::Board & bd, int moves, int64_t time, int64_t inc)
 {
 
 	if (moves == 0) moves = 40;
 	moves = std::min(moves, material::interpolation(35, 15, bd));
 	assert(moves > 0);
 
-	int64 total = time + inc * (moves - 1);
+	int64_t total = time + inc * (moves - 1);
 	int factor = engine::engine.ponder ? 140 : 120;
-	int64 alloc = total / moves * factor / 100;
-	int64 reserve = total * (moves - 1) / 40;
-	int64 max = std::min(time, total - reserve);
+	int64_t alloc = total / moves * factor / 100;
+	int64_t reserve = total * (moves - 1) / 40;
+	int64_t max = std::min(time, total - reserve);
 	max = std::min(max - 60, max * 95 / 100); // 60ms for lag
 
-	alloc = std::max(alloc, I64(0));
-	max = std::max(max, I64(0));
+	alloc = std::max(alloc, int64_t(0));
+	max = std::max(max, int64_t(0));
 
 	p_time.smart = true;
 	p_time.limit_0 = std::min(alloc, max);
@@ -7549,14 +7365,14 @@ void command(Scanner & scan)
 		}
 
 		if (false) {
-		} else if (util::string_case_equal(name, "Hash")) {
-			engine::engine.hash = int(util::to_int(value));
+		} else if (name == "Hash") {
+			engine::engine.hash = std::stoi(value);
 			search::sg.trans.set_size(engine::engine.hash);
-		} else if (util::string_case_equal(name, "Ponder")) {
+		} else if (name == "Ponder") {
 			engine::engine.ponder = util::to_bool(value);
-		} else if (util::string_case_equal(name, "Threads") || util::string_case_equal(name, "Cores")) {
-			engine::engine.threads = int(util::to_int(value));
-		} else if (util::string_case_equal(name, "Log File")) {
+		} else if (name == "Threads") {
+			engine::engine.threads = std::stoi(value);
+		} else if (name == "Log File") {
 			engine::engine.log = util::to_bool(value);
 		}
 
@@ -7636,46 +7452,46 @@ void command(Scanner & scan)
 
 				if (bd.turn() == side::WHITE) {
 					smart = true;
-					time = int(util::to_int(args));
+					time = std::stoi(args);
 				}
 
 			} else if (part == "btime") {
 
 				if (bd.turn() == side::BLACK) {
 					smart = true;
-					time = int(util::to_int(args));
+					time = std::stoi(args);
 				}
 
 			} else if (part == "winc") {
 
 				if (bd.turn() == side::WHITE) {
 					smart = true;
-					inc = int(util::to_int(args));
+					inc = std::stoi(args);
 				}
 
 			} else if (part == "binc") {
 
 				if (bd.turn() == side::BLACK) {
 					smart = true;
-					inc = int(util::to_int(args));
+					inc = std::stoi(args);
 				}
 
 			} else if (part == "movestogo") {
 
 				smart = true;
-				movestogo = int(util::to_int(args));
+				movestogo = std::stoi(args);
 
 			} else if (part == "depth") {
 
-				search::set_depth_limit(int(util::to_int(args)));
+				search::set_depth_limit(std::stoi(args));
 
 			} else if (part == "nodes") {
 
-				search::set_node_limit(util::to_int(args));
+				search::set_node_limit(std::stoll(args));
 
 			} else if (part == "movetime") {
 
-				search::set_time_limit(int(util::to_int(args)));
+				search::set_time_limit(std::stoi(args));
 
 			} else if (part == "infinite") {
 
@@ -7741,10 +7557,10 @@ void loop()
 int main(int /* argc */, char * /* argv */ [])
 {
 
-	assert(sizeof(uint8)  == 1);
-	assert(sizeof(uint16) == 2);
-	assert(sizeof(uint32) == 4);
-	assert(sizeof(uint64) == 8);
+	assert(sizeof(uint8_t)  == 1);
+	assert(sizeof(uint16_t) == 2);
+	assert(sizeof(uint32_t) == 4);
+	assert(sizeof(uint64_t) == 8);
 
 	input::init();
 	bit::init();
