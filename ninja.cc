@@ -4962,30 +4962,6 @@ int king_score(int sc, int n)
 	return mul_shift(sc, weight, 8);
 }
 
-int eval_outpost(int sq, int sd, const board::Board & bd, const pawn::Info & pi)
-{
-
-	assert(square::rank(sq, sd) >= square::RANK_5);
-
-	int xd = side::opposit(sd);
-
-	int weight = 0;
-
-	if (bit::is_set(pi.safe, sq)) { // safe square
-		weight += 2;
-	}
-
-	if (bd.square_is(square::stop(sq, sd), piece::PAWN, xd)) { // shielded
-		weight++;
-	}
-
-	if (pawn::is_attacked(sq, sd, bd)) { // defended
-		weight++;
-	}
-
-	return weight - 2;
-}
-
 bool passer_is_unstoppable(int sq, int sd, const board::Board & bd)
 {
 
@@ -5371,10 +5347,6 @@ int comp_eval(const board::Board & bd, pawn::Table & pawn_table)   // NOTE: scor
 				if (pc != piece::KING && (ts_safe & king_area[xd][op_king]) != 0) { // king attack
 					king_n++;
 					king_power += material::power(pc);
-				}
-
-				if (piece::is_minor(pc) && rk >= square::RANK_5 && rk <= square::RANK_6 && fl >= square::FILE_C && fl <= square::FILE_F) { // outpost
-					eval += eval_outpost(sq, sd, bd, pi) * 5;
 				}
 
 				if (piece::is_minor(pc) && rk >= square::RANK_5 && !bit::is_set(ai.all_attacks[sd], sq)) { // loose minor
