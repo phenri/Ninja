@@ -3212,6 +3212,7 @@ struct Engine {
 	int hash;
 	bool ponder;
 	int threads;
+	int time_buffer;
 	bool log;
 };
 
@@ -3222,6 +3223,7 @@ void init()
 	engine.hash = 16;
 	engine.ponder = false;
 	engine.threads = 1;
+	engine.time_buffer = 60;
 	engine.log = false;
 }
 
@@ -7150,7 +7152,7 @@ void search_dumb(const board::Board & bd)
 	search_go(bd);
 }
 
-void search_smart(const board::Board & bd, int moves, int64_t time, int64_t inc)
+void search_smart(const board::Board & bd, int moves, int64_t time, int64_t inc, int64_t time_buffer)
 {
 
 	if (moves == 0) moves = 40;
@@ -7162,7 +7164,7 @@ void search_smart(const board::Board & bd, int moves, int64_t time, int64_t inc)
 	int64_t alloc = total / moves * factor / 100;
 	int64_t reserve = total * (moves - 1) / 40;
 	int64_t max = std::min(time, total - reserve);
-	max = std::min(max - 60, max * 95 / 100); // 60ms for lag
+	max = std::min(max - time_buffer, max * 95 / 100);
 
 	alloc = std::max(alloc, int64_t(0));
 	max = std::max(max, int64_t(0));
@@ -7285,7 +7287,6 @@ void move(const std::string & move)
 
 void send_bestmove()
 {
-
 	std::cout << "bestmove " << move::to_can(search::best.move);
 	if (search::best.pv.size() > 1) std::cout << " ponder " << move::to_can(search::best.pv.move(1));
 	std::cout << std::endl;
@@ -7295,29 +7296,22 @@ void send_bestmove()
 
 void command(Scanner & scan)
 {
-
 	std::string command = scan.get_word();
 
-	if (false) {
-
-	} else if (command == "uci") {
-
+	if (command == "uci") {
 		std::cout << "id name Senpai 1.0" << std::endl;
 		std::cout << "id author Fabien Letouzey" << std::endl;
-
 		std::cout << "option name Hash type spin default " << engine::engine.hash << " min 1 max 16384" << std::endl;
 		std::cout << "option name Ponder type check default " << engine::engine.ponder << std::endl;
 		std::cout << "option name Threads type spin default " << engine::engine.threads << " min 1 max 16" << std::endl;
+		std::cout << "option name Time Buffer type spin default " << engine::engine.time_buffer << " min 0 max 1000" << std::endl;
 		std::cout << "option name Log File type check default " << engine::engine.log << std::endl;
-
 		std::cout << "uciok" << std::endl;
 
-	} else if (command == "isready") {
-
+	} else if (command == "isready")
 		std::cout << "readyok" << std::endl;
 
-	} else if (command == "setoption") {
-
+	else if (command == "setoption") {
 		scan.add_keyword("name");
 		scan.add_keyword("value");
 
@@ -7327,63 +7321,46 @@ void command(Scanner & scan)
 		std::string part;
 
 		while ((part = scan.get_keyword()) != "") {
-
-			if (false) {
-			} else if (part == "name") {
+			if (part == "name")
 				name = scan.get_args();
-			} else if (part == "value") {
+			else if (part == "value")
 				value = scan.get_args();
-			}
 		}
 
-		if (false) {
-		} else if (name == "Hash") {
+		if (name == "Hash") {
 			engine::engine.hash = std::stoi(value);
 			search::sg.trans.set_size(engine::engine.hash);
-		} else if (name == "Ponder") {
+		} else if (name == "Ponder")
 			engine::engine.ponder = util::to_bool(value);
-		} else if (name == "Threads") {
+		else if (name == "Threads")
 			engine::engine.threads = std::stoi(value);
-		} else if (name == "Log File") {
+		else if (name == "Time Buffer")
+			engine::engine.time_buffer = std::stoi(value);
+		else if (name == "Log File")
 			engine::engine.log = util::to_bool(value);
-		}
 
-	} else if (command == "ucinewgame") {
-
+	} else if (command == "ucinewgame")
 		search::sg.trans.clear();
 
-	} else if (command == "position") {
-
+	else if (command == "position") {
 		scan.add_keyword("fen");
 		scan.add_keyword("startpos");
 		scan.add_keyword("moves");
 
 		std::string part;
-
 		while ((part = scan.get_keyword()) != "") {
-
-			if (false) {
-
-			} else if (part == "fen") {
-
+			if (part == "fen")
 				fen(scan.get_args());
-
-			} else if (part == "startpos") {
-
+			else if (part == "startpos")
 				fen(board::start_fen);
-
-			} else if (part == "moves") {
-
+			else if (part == "moves") {
 				std::string arg;
-
-				while ((arg = scan.get_word()) != "") {
+				while ((arg = scan.get_word()) != "")
 					uci::move(arg);
-				}
 			}
 		}
 
 	} else if (command == "go") {
-
 		scan.add_keyword("searchmoves");
 		scan.add_keyword("ponder");
 		scan.add_keyword("wtime");
@@ -7410,97 +7387,68 @@ void command(Scanner & scan)
 		std::string part;
 
 		while ((part = scan.get_keyword()) != "") {
-
 			std::string args = scan.get_args();
 
-			if (false) {
-
-			} else if (part == "ponder") {
-
+			if (part == "ponder") {
 				infinite = true;
 				search::set_ponder();
-
 			} else if (part == "wtime") {
-
 				if (bd.turn() == side::WHITE) {
 					smart = true;
 					time = std::stoi(args);
 				}
-
 			} else if (part == "btime") {
-
 				if (bd.turn() == side::BLACK) {
 					smart = true;
 					time = std::stoi(args);
 				}
-
 			} else if (part == "winc") {
-
 				if (bd.turn() == side::WHITE) {
 					smart = true;
 					inc = std::stoi(args);
 				}
-
 			} else if (part == "binc") {
-
 				if (bd.turn() == side::BLACK) {
 					smart = true;
 					inc = std::stoi(args);
 				}
-
 			} else if (part == "movestogo") {
-
 				smart = true;
 				movestogo = std::stoi(args);
-
-			} else if (part == "depth") {
-
+			} else if (part == "depth")
 				search::set_depth_limit(std::stoi(args));
-
-			} else if (part == "nodes") {
-
+			else if (part == "nodes")
 				search::set_node_limit(std::stoll(args));
-
-			} else if (part == "movetime") {
-
+			else if (part == "movetime")
 				search::set_time_limit(std::stoi(args));
-
-			} else if (part == "infinite") {
-
+			else if (part == "infinite")
 				infinite = true;
-			}
 		}
 
-		if (smart) {
-			search::search_smart(bd, movestogo, time, inc);
-		} else {
+		if (smart)
+			search::search_smart(bd, movestogo, time, inc, engine::engine.time_buffer);
+		else
 			search::search_dumb(bd);
-		}
 
-		if (infinite) { // let's implement the UCI-design mistake :(
+		if (infinite)
 			delay = true;
-		} else {
+		else
 			send_bestmove();
-		}
 
 	} else if (command == "stop") {
-
-		if (delay) send_bestmove();
-
+		if (delay)
+			send_bestmove();
 	} else if (command == "ponderhit") {
-
-		if (delay) send_bestmove();
-
-	} else if (command == "quit") {
-
+		if (delay)
+			send_bestmove();
+	} else if (command == "quit")
 		std::exit(EXIT_SUCCESS);
-	}
 }
 
 void line(const std::string & line)
 {
-
-	if (engine::engine.log) util::log(line);
+	if (engine::engine.log)
+		util::log(line);
 
 	std::stringstream args(line);
 	Scanner scan(args);
@@ -7509,7 +7457,6 @@ void line(const std::string & line)
 
 void loop()
 {
-
 	std::cout << std::boolalpha;
 
 	infinite = false;
@@ -7518,22 +7465,14 @@ void loop()
 	fen(board::start_fen);
 
 	std::string line;
-
-	while (input::input.get_line(line)) {
+	while (input::input.get_line(line))
 		uci::line(line);
-	}
 }
 
 }
 
-int main(int /* argc */, char * /* argv */ [])
+int main()
 {
-
-	assert(sizeof(uint8_t)  == 1);
-	assert(sizeof(uint16_t) == 2);
-	assert(sizeof(uint32_t) == 4);
-	assert(sizeof(uint64_t) == 8);
-
 	input::init();
 	bit::init();
 	hash::init();
