@@ -1,5 +1,7 @@
 /*
- * Senpai 1.0 Copyright (C) 2014 Fabien Letouzey.
+ * Ninja, a UCI chess engine derived from Senpai 1.0
+ * Copyright (C) 2014 Fabien Letouzey (Senpai author)
+ * Copyright (C) 2014 Lucas Braesch
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-// C includes
 #include <cmath>
-#include <cstdlib>
-#include <ctime>
-
-// C++ includes
-#include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -686,18 +681,6 @@ const int SIZE       = EN_PASSANT + 8;
 
 hash_t p_rand[SIZE];
 
-hash_t rand_64()
-{
-
-	hash_t rand = 0;
-
-	for (int i = 0; i < 4; i++) {
-		rand = (rand << 16) | util::rand_int(1 << 16);
-	}
-
-	return rand;
-}
-
 hash_t rand_key(int index)
 {
 	assert(index >= 0 && index < SIZE);
@@ -742,9 +725,8 @@ uint32_t lock(hash_t key)
 
 void init()
 {
-	for (int i = 0; i < SIZE; i++) {
-		p_rand[i] = rand_64();
-	}
+	util::PRNG prng;
+	for (int i = 0; i < SIZE; p_rand[i++] = prng.rand());
 }
 
 }
@@ -7143,8 +7125,8 @@ void command(Scanner & scan)
 	std::string command = scan.get_word();
 
 	if (command == "uci") {
-		std::cout << "id name Senpai 1.0" << std::endl;
-		std::cout << "id author Fabien Letouzey" << std::endl;
+		std::cout << "id name Ninja 1.0" << std::endl;
+		std::cout << "id author Fabien Letouzey and Lucas Braesch" << std::endl;
 		std::cout << "option name Hash type spin default " << engine::engine.hash << " min 1 max 16384" << std::endl;
 		std::cout << "option name Ponder type check default " << engine::engine.ponder << std::endl;
 		std::cout << "option name Threads type spin default " << engine::engine.threads << " min 1 max 16" << std::endl;

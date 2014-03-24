@@ -1,5 +1,24 @@
+/*
+ * Ninja, a UCI chess engine derived from Senpai 1.0
+ * Copyright (C) 2014 Fabien Letouzey (Senpai author)
+ * Copyright (C) 2014 Lucas Braesch
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #pragma once
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <chrono>
 #include <condition_variable>
@@ -47,9 +66,20 @@ public:
 	void signal();
 };
 
+class PRNG
+{
+	uint64_t a, b, c, d;	// 256-bit state
+
+	uint64_t rol(uint64_t x, uint64_t k) const;
+
+public:
+	PRNG();
+
+	void init(uint64_t seed = 0);
+	uint64_t rand();
+};
+
 extern int round(double x);
-extern double rand_float();
-extern int rand_int(int n);
 extern bool to_bool(const std::string & s);
 extern void log(const std::string & s);
 
