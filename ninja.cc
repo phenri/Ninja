@@ -4147,7 +4147,9 @@ void init()
 		p_score[piece::WHITE_KNIGHT][sq][stage::MG] = (Knight_Line[fl] + Knight_Line[rk] + Advance_Rank[rk]) * 4;
 		p_score[piece::WHITE_KNIGHT][sq][stage::EG] = (Knight_Line[fl] + Knight_Line[rk] + Advance_Rank[rk]) * 4;
 
-		p_score[piece::WHITE_BISHOP][sq][stage::MG] = (King_Line[fl] + King_Line[rk]) * 2;
+		p_score[piece::WHITE_BISHOP][sq][stage::MG] = (King_Line[fl] + King_Line[rk]) * 2
+			+ 4 * (rk == fl || rk + fl == 7)	// long diagonal
+			+ 4 * (sq == square::B2 || sq == square::G2);	// fianchetto square
 		p_score[piece::WHITE_BISHOP][sq][stage::EG] = (King_Line[fl] + King_Line[rk]) * 2;
 
 		p_score[piece::WHITE_ROOK][sq][stage::MG] = King_Line[fl] * 5;
@@ -4927,40 +4929,6 @@ int eval_pawn_cap(int sd, const board::Board & bd, const Attack_Info & ai)
 	return sc / 10;
 }
 
-int eval_pattern(const board::Board & bd)
-{
-
-	int eval = 0;
-
-	// fianchetto
-
-	if (bd.square_is(square::B2, piece::BISHOP, side::WHITE)
-			&& bd.square_is(square::B3, piece::PAWN,   side::WHITE)
-			&& bd.square_is(square::C2, piece::PAWN,   side::WHITE)) {
-		eval += 20;
-	}
-
-	if (bd.square_is(square::G2, piece::BISHOP, side::WHITE)
-			&& bd.square_is(square::G3, piece::PAWN,   side::WHITE)
-			&& bd.square_is(square::F2, piece::PAWN,   side::WHITE)) {
-		eval += 20;
-	}
-
-	if (bd.square_is(square::B7, piece::BISHOP, side::BLACK)
-			&& bd.square_is(square::B6, piece::PAWN,   side::BLACK)
-			&& bd.square_is(square::C7, piece::PAWN,   side::BLACK)) {
-		eval -= 20;
-	}
-
-	if (bd.square_is(square::G7, piece::BISHOP, side::BLACK)
-			&& bd.square_is(square::G6, piece::PAWN,   side::BLACK)
-			&& bd.square_is(square::F7, piece::PAWN,   side::BLACK)) {
-		eval -= 20;
-	}
-
-	return eval;
-}
-
 bool has_minor(int sd, const board::Board & bd)
 {
 	return bd.count(piece::KNIGHT, sd) + bd.count(piece::BISHOP, sd) != 0;
@@ -5290,8 +5258,6 @@ int comp_eval(const board::Board & bd, pawn::Table & pawn_table)   // NOTE: scor
 
 	mg += pi.mg;
 	eg += pi.eg;
-
-	eval += eval_pattern(bd);
 
 	eval += material::interpolation(mg, eg, bd);
 
