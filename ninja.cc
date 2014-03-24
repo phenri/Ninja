@@ -16,24 +16,17 @@
 */
 
 // C includes
-#include <cassert> // needs NDEBUG
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
 
 // C++ includes
 #include <cstdint>
-#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string>
 #include <vector>
 
-// C++11 includes
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <thread>
+#include "util.h"
 
 // types
 
@@ -41,121 +34,6 @@ typedef uint64_t bit_t;
 typedef uint64_t hash_t; // key_t is used by Unix :(
 
 // modules
-
-namespace util
-{
-
-class Timer
-{
-
-private:
-
-	typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_t;
-
-	int p_elapsed;
-	bool p_running;
-	time_t p_start;
-
-	static time_t now() {
-		return std::chrono::high_resolution_clock::now();
-	}
-
-	int time() const {
-		assert(p_running);
-		return std::chrono::duration_cast<std::chrono::milliseconds>(now() - p_start).count();
-	}
-
-public:
-
-	Timer() {
-		reset();
-	}
-
-	void reset() {
-		p_elapsed = 0;
-		p_running = false;
-	}
-
-	void start() {
-		p_start = now();
-		p_running = true;
-	}
-
-	void stop() {
-		p_elapsed += time();
-		p_running = false;
-	}
-
-	int elapsed() const {
-		int time = p_elapsed;
-		if (p_running) time += this->time();
-		return time;
-	}
-
-};
-
-class Lockable
-{
-
-protected: // HACK for Waitable::wait()
-
-	mutable std::mutex p_mutex;
-
-public:
-
-	void lock   () const {
-		p_mutex.lock();
-	}
-	void unlock () const {
-		p_mutex.unlock();
-	}
-};
-
-class Waitable : public Lockable
-{
-
-private:
-
-	std::condition_variable_any p_cond;
-
-public:
-
-	void wait   () {
-		p_cond.wait(p_mutex);    // HACK: direct access
-	}
-	void signal () {
-		p_cond.notify_one();
-	}
-};
-
-int round(double x)
-{
-	return int(std::floor(x + 0.5));
-}
-
-double rand_float()
-{
-	return double(std::rand()) / (double(RAND_MAX) + 1.0);
-}
-
-int rand_int(int n)
-{
-	assert(n > 0);
-	return int(rand_float() * double(n));
-}
-
-bool to_bool(const std::string & s)
-{
-	return s == "true" ? true : false;
-}
-
-void log(const std::string & s)
-{
-	std::ofstream log_file("log.txt", std::ios_base::app);
-	log_file << s << std::endl;
-}
-
-}
 
 namespace input
 {
