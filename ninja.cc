@@ -3219,7 +3219,7 @@ Engine engine;
 
 void init()
 {
-	engine.hash = 64;
+	engine.hash = 16;
 	engine.ponder = false;
 	engine.threads = 1;
 	engine.log = false;
@@ -7305,7 +7305,7 @@ void command(Scanner & scan)
 		std::cout << "id name Senpai 1.0" << std::endl;
 		std::cout << "id author Fabien Letouzey" << std::endl;
 
-		std::cout << "option name Hash type spin default " << engine::engine.hash << " min 16 max 16384" << std::endl;
+		std::cout << "option name Hash type spin default " << engine::engine.hash << " min 1 max 16384" << std::endl;
 		std::cout << "option name Ponder type check default " << engine::engine.ponder << std::endl;
 		std::cout << "option name Threads type spin default " << engine::engine.threads << " min 1 max 16" << std::endl;
 		std::cout << "option name Log File type check default " << engine::engine.log << std::endl;
