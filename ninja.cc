@@ -460,7 +460,6 @@ struct Copy {
 	int flags;
 	int ep_sq;
 	int moves;
-	int recap;
 	int phase;
 };
 
@@ -607,10 +606,6 @@ public:
 		return p_copy.moves;
 	}
 
-	int recap() const {
-		return p_copy.recap;
-	}
-
 	int phase() const {
 		return p_copy.phase;
 	}
@@ -665,7 +660,6 @@ public:
 		p_copy.flags = 0;
 		p_copy.ep_sq = square::NONE;
 		p_copy.moves = 0;
-		p_copy.recap = square::NONE;
 		p_copy.phase = 0;
 
 		p_root = 0;
@@ -918,7 +912,6 @@ public:
 		undo.castling = false;
 
 		p_copy.moves++;
-		p_copy.recap = square::NONE;
 
 		// capture
 
@@ -1001,12 +994,6 @@ public:
 			p_copy.moves = 0; // conversion;
 		}
 
-		// recapture
-
-		if (cp != piece::NONE || pp != piece::NONE) {
-			p_copy.recap = t;
-		}
-
 		update();
 	}
 
@@ -1076,7 +1063,6 @@ public:
 		flip_turn();
 		p_copy.ep_sq = square::NONE;
 		p_copy.moves = 0; // HACK: conversion
-		p_copy.recap = square::NONE;
 
 		update();
 	}
@@ -2813,11 +2799,6 @@ bool is_en_passant(int mv, const board::Board & bd)
 	return piece(mv) == piece::PAWN && to(mv) == bd.ep_sq();
 }
 
-bool is_recapture(int mv, const board::Board & bd)
-{
-	return to(mv) == bd.recap() && is_win(mv, bd);
-}
-
 bool is_promotion(int mv)
 {
 	return prom(mv) != piece::NONE;
@@ -2932,25 +2913,22 @@ bool is_safe(int mv, const board::Board & bd)
 	}
 }
 
-bool is_win(int mv, const board::Board & bd)
+bool is_win(int mv, const board::Board& bd)
 {
-
 	assert(is_tactical(mv));
 
 	int pc = piece(mv);
 	int cp = cap(mv);
 	int pp = prom(mv);
 
-	if (false) {
-	} else if (pc == piece::KING) {
+	if (pc == piece::KING)
 		return true;
-	} else if (piece::value(cp) > piece::value(pc)) {
+	else if (piece::value(cp) > piece::value(pc))
 		return true;
-	} else if (pp != piece::NONE && pp != piece::QUEEN) { // under-promotion
+	else if (pp != piece::NONE && pp != piece::QUEEN)	// under-promotion
 		return false;
-	} else {
+	else
 		return see(mv, 0, +1, bd) > 0;
-	}
 }
 
 bool is_legal_debug(int mv, board::Board & bd)
@@ -6251,7 +6229,6 @@ int extension(Search_Local & sl, int mv, int depth, bool pv_node)
 	board::Board & bd = sl.board;
 
 	if ((depth <= 4 && move::is_check(mv, bd))
-			|| (depth <= 4 && move::is_recapture(mv, bd))
 			|| (pv_node && move::is_check(mv, bd))
 			|| (pv_node && move::is_tactical(mv) && move::is_win(mv, bd))
 			|| (pv_node && move::is_pawn_push(mv, bd))) {
