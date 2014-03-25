@@ -484,9 +484,6 @@ private:
 	bit_t p_side[side::SIZE];
 	bit_t p_all;
 
-	int p_king[side::SIZE];
-	int p_count[piece::SIDE_SIZE];
-
 	int p_square[square::SIZE];
 	int p_turn;
 	Copy p_copy;
@@ -499,24 +496,16 @@ public:
 
 	void operator=(const Board & bd) {
 
-		for (int pc = 0; pc < piece::SIZE; pc++) {
+		for (int pc = 0; pc < piece::SIZE; pc++)
 			p_piece[pc] = bd.p_piece[pc];
-		}
 
-		for (int sd = 0; sd < side::SIZE; sd++) {
+		for (int sd = 0; sd < side::SIZE; sd++)
 			p_side[sd] = bd.p_side[sd];
-			p_king[sd] = bd.p_king[sd];
-		}
 
 		p_all = bd.p_all;
 
-		for (int p12 = 0; p12 < piece::SIDE_SIZE; p12++) {
-			p_count[p12] = bd.p_count[p12];
-		}
-
-		for (int sq = 0; sq < square::SIZE; sq++) {
+		for (int sq = 0; sq < square::SIZE; sq++)
 			p_square[sq] = bd.p_square[sq];
-		}
 
 		p_turn = bd.p_turn;
 		p_copy = bd.p_copy;
@@ -524,9 +513,8 @@ public:
 		p_root = bd.p_root;
 		p_sp = bd.p_sp;
 
-		for (int sp = 0; sp < bd.p_sp; sp++) {
+		for (int sp = 0; sp < bd.p_sp; sp++)
 			p_stack[sp] = bd.p_stack[sp];
-		}
 
 		assert(moves() == bd.moves());
 	}
@@ -546,8 +534,7 @@ public:
 	int count(int pc, int sd) const {
 		assert(pc < piece::SIZE);
 		assert(pc != piece::NONE);
-		// return bit::count(piece(pc, sd));
-		return p_count[piece::make(pc, sd)];
+		return bit::count(piece(pc, sd));
 	}
 
 	bit_t side(int sd) const {
@@ -582,9 +569,8 @@ public:
 	}
 
 	int king(int sd) const {
-		int sq = p_king[sd];
-		assert(sq == bit::first(piece(piece::KING, sd)));
-		return sq;
+		assert(sd < side::SIZE);
+		return bit::first(piece(piece::KING, sd));
 	}
 
 	int turn() const {
@@ -663,25 +649,14 @@ public:
 
 	void clear() {
 
-		for (int pc = 0; pc < piece::SIZE; pc++) {
+		for (int pc = 0; pc < piece::SIZE; pc++)
 			p_piece[pc] = 0;
-		}
 
-		for (int sd = 0; sd < side::SIZE; sd++) {
+		for (int sd = 0; sd < side::SIZE; sd++)
 			p_side[sd] = 0;
-		}
 
-		for (int sq = 0; sq < square::SIZE; sq++) {
+		for (int sq = 0; sq < square::SIZE; sq++)
 			p_square[sq] = piece::NONE;
-		}
-
-		for (int sd = 0; sd < side::SIZE; sd++) {
-			p_king[sd] = square::NONE;
-		}
-
-		for (int p12 = 0; p12 < piece::SIDE_SIZE; p12++) {
-			p_count[p12] = 0;
-		}
 
 		p_turn = side::WHITE;
 
@@ -716,14 +691,11 @@ public:
 
 		int p12 = piece::make(pc, sd);
 
-		assert(p_count[p12] != 0);
-		p_count[p12]--;
-
 		if (update_copy) {
-
 			hash_t key = hash::piece_key(p12, sq);
 			p_copy.key ^= key;
-			if (pc == piece::PAWN) p_copy.pawn_key ^= key;
+			if (pc == piece::PAWN)
+				p_copy.pawn_key ^= key;
 
 			p_copy.phase -= material::phase(pc);
 		}
@@ -744,19 +716,13 @@ public:
 		assert(p_square[sq] == piece::NONE);
 		p_square[sq] = pc;
 
-		if (pc == piece::KING) {
-			p_king[sd] = sq;
-		}
-
 		int p12 = piece::make(pc, sd);
 
-		p_count[p12]++;
-
 		if (update_copy) {
-
 			hash_t key = hash::piece_key(p12, sq);
 			p_copy.key ^= key;
-			if (pc == piece::PAWN) p_copy.pawn_key ^= key;
+			if (pc == piece::PAWN)
+				p_copy.pawn_key ^= key;
 
 			p_copy.phase += material::phase(pc);
 		}
@@ -777,13 +743,6 @@ public:
 		p_all = p_side[side::WHITE] | p_side[side::BLACK];
 
 #ifndef NDEBUG
-
-		for (int p12 = 0; p12 < piece::SIDE_SIZE; p12++) {
-			assert(p_count[p12] == bit::count(piece(piece::piece(p12), piece::side(p12))));
-		}
-
-		assert(p_count[piece::WHITE_KING] == 1);
-		assert(p_count[piece::BLACK_KING] == 1);
 
 		assert((p_piece[piece::PAWN] & bit::rank(square::RANK_1)) == 0);
 		assert((p_piece[piece::PAWN] & bit::rank(square::RANK_8)) == 0);
