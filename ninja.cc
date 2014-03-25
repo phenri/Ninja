@@ -23,6 +23,7 @@
 
 #include "util.h"
 #include "input.h"
+#include "types.h"
 
 // types
 
@@ -30,289 +31,6 @@ typedef uint64_t bit_t;
 typedef uint64_t hash_t; // key_t is used by Unix :(
 
 // modules
-
-namespace side
-{
-
-const int SIZE = 2;
-
-enum {WHITE, BLACK};
-
-int opposit(int sd)
-{
-	return sd ^ 1;
-}
-
-}
-
-namespace square
-{
-
-const int FILE_SIZE = 8;
-const int RANK_SIZE = 8;
-const int SIZE = FILE_SIZE * RANK_SIZE;
-
-enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
-enum {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
-
-enum {
-	NONE = -1,
-	A1, A2, A3, A4, A5, A6, A7, A8,
-	B1, B2, B3, B4, B5, B6, B7, B8,
-	C1, C2, C3, C4, C5, C6, C7, C8,
-	D1, D2, D3, D4, D5, D6, D7, D8,
-	E1, E2, E3, E4, E5, E6, E7, E8,
-	F1, F2, F3, F4, F5, F6, F7, F8,
-	G1, G2, G3, G4, G5, G6, G7, G8,
-	H1, H2, H3, H4, H5, H6, H7, H8,
-};
-
-enum {
-	INC_LEFT  = -8,
-	INC_RIGHT = +8,
-	CASTLING_DELTA = 16,
-	DOUBLE_PAWN_DELTA = 2,
-};
-
-int make(int fl, int rk)
-{
-	assert(fl < 8 && rk < 8);
-	return (fl << 3) | rk;
-}
-
-int make(int fl, int rk, int sd)
-{
-	assert(fl < 8 && rk < 8);
-	return make(fl, (rk ^ -sd) & 7);
-}
-
-int file(int sq)
-{
-	return sq >> 3;
-}
-
-int rank(int sq)
-{
-	return sq & 7;
-}
-
-int rank(int sq, int sd)
-{
-	return (sq ^ -sd) & 7;
-}
-
-int opposit_file(int sq)
-{
-	return sq ^ 070;
-}
-
-int opposit_rank(int sq)
-{
-	return sq ^ 007;
-}
-
-bool is_promotion(int sq)
-{
-	int rk = rank(sq);
-	return rk == RANK_1 || rk == RANK_8;
-}
-
-int colour(int sq)
-{
-	return ((sq >> 3) ^ sq) & 1;
-}
-
-bool same_colour(int s0, int s1)
-{
-	int diff = s0 ^ s1;
-	return (((diff >> 3) ^ diff) & 1) == 0;
-}
-
-bool same_line(int s0, int s1)
-{
-	return file(s0) == file(s1) || rank(s0) == rank(s1);
-}
-
-int file_distance(int s0, int s1)
-{
-	return std::abs(file(s1) - file(s0));
-}
-
-int rank_distance(int s0, int s1)
-{
-	return std::abs(rank(s1) - rank(s0));
-}
-
-int distance(int s0, int s1)
-{
-	return std::max(file_distance(s0, s1), rank_distance(s0, s1));
-}
-
-int pawn_inc(int sd)
-{
-	return (sd == side::WHITE) ? +1 : -1;
-}
-
-int stop(int sq, int sd)
-{
-	return sq + pawn_inc(sd);
-}
-
-int promotion(int sq, int sd)
-{
-	return make(file(sq), RANK_8, sd);
-}
-
-bool is_valid_88(int s88)
-{
-	return (s88 & ~0x77) == 0;
-}
-
-int to_88(int sq)
-{
-	return sq + (sq & 070);
-}
-
-int from_88(int s88)
-{
-	assert(is_valid_88(s88));
-	return (s88 + (s88 & 7)) >> 1;
-}
-
-int from_fen(int sq)
-{
-	return make(sq & 7, (sq >> 3) ^ 7);
-}
-
-int from_string(const std::string & s)
-{
-	assert(s.length() == 2);
-	return make(s[0] - 'a', s[1] - '1');
-}
-
-std::string to_string(int sq)
-{
-	std::string s;
-	s += 'a' + file(sq);
-	s += '1' + rank(sq);
-	return s;
-}
-
-}
-
-namespace wing
-{
-
-const int SIZE = 2;
-
-enum {KING, QUEEN};
-
-const int shelter_file[SIZE] = { square::FILE_G, square::FILE_B }; // for pawn-shelter eval
-
-}
-
-namespace piece
-{
-
-const int SIZE = 7;
-const int SIDE_SIZE = 12;
-
-enum Piece {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE};
-
-enum Side_Piece {
-	WHITE_PAWN, BLACK_PAWN,
-	WHITE_KNIGHT, BLACK_KNIGHT,
-	WHITE_BISHOP, BLACK_BISHOP,
-	WHITE_ROOK, BLACK_ROOK,
-	WHITE_QUEEN, BLACK_QUEEN,
-	WHITE_KING, BLACK_KING
-};
-
-const int PAWN_VALUE   = 100;
-const int KNIGHT_VALUE = 325;
-const int BISHOP_VALUE = 325;
-const int ROOK_VALUE   = 500;
-const int QUEEN_VALUE  = 975;
-const int KING_VALUE   = 10000; // for SEE
-
-const std::string Char = "PNBRQK?";
-const std::string Fen_Char = "PpNnBbRrQqKk";
-
-bool is_minor(int pc)
-{
-	assert(pc < SIZE);
-	return pc == KNIGHT || pc == BISHOP;
-}
-
-bool is_major(int pc)
-{
-	assert(pc < SIZE);
-	return pc == ROOK || pc == QUEEN;
-}
-
-bool is_slider(int pc)
-{
-	assert(pc < SIZE);
-	return pc >= BISHOP && pc <= QUEEN;
-}
-
-int score(int pc)   // for MVV/LVA
-{
-	assert(pc < SIZE);
-	assert(pc != NONE);
-	return pc;
-}
-
-int value(int pc)
-{
-	assert(pc < SIZE);
-	static const int value[SIZE] = { PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE, 0 };
-	return value[pc];
-}
-
-int make(int pc, int sd)
-{
-	assert(pc < SIZE);
-	assert(pc != NONE);
-	assert(sd < side::SIZE);
-	return (pc << 1) | sd;
-}
-
-int piece(int p12)
-{
-	assert(p12 < SIDE_SIZE);
-	return p12 >> 1;
-}
-
-int side(int p12)
-{
-	assert(p12 < SIDE_SIZE);
-	return p12 & 1;
-}
-
-int from_char(char c)
-{
-	return Char.find(c);
-}
-
-char to_char(int pc)
-{
-	assert(pc < SIZE);
-	return Char[pc];
-}
-
-int from_fen(char c)
-{
-	return Fen_Char.find(c);
-}
-
-char to_fen(int p12)
-{
-	assert(p12 < SIDE_SIZE);
-	return Fen_Char[p12];
-}
-
-}
 
 namespace move
 {
@@ -1065,7 +783,7 @@ public:
 	}
 
 	void flip_turn() {
-		p_turn = side::opposit(p_turn);
+		p_turn = side::opposite(p_turn);
 		p_copy.key ^= hash::turn_flip();
 	}
 
@@ -1237,7 +955,7 @@ public:
 		assert(mv != move::NULL_);
 
 		int sd = p_turn;
-		int xd = side::opposit(sd);
+		int xd = side::opposite(sd);
 
 		int f = move::from(mv);
 		int t = move::to(mv);
@@ -1364,7 +1082,7 @@ public:
 		int pp = move::prom(mv);
 
 		int xd = p_turn;
-		int sd = side::opposit(xd);
+		int sd = side::opposite(xd);
 
 		assert(p_square[t] == pc || p_square[t] == pp);
 		assert(square_side(t) == sd);
@@ -1575,7 +1293,7 @@ bit_t pawn_attacks_from(int sd, int f)
 bit_t pawn_attacks_to(int sd, int t)
 {
 	assert(sd < side::SIZE);
-	return pawn_attacks_from(side::opposit(sd), t);
+	return pawn_attacks_from(side::opposite(sd), t);
 }
 
 bit_t piece_attacks_from(int pc, int f, const board::Board & bd)
@@ -1620,7 +1338,7 @@ bit_t attacks_from(int pc, int sd, int f, const board::Board & bd)
 
 bit_t attacks_to(int pc, int sd, int t, const board::Board & bd)
 {
-	return attacks_from(pc, side::opposit(sd), t, bd); // HACK for pawns
+	return attacks_from(pc, side::opposite(sd), t, bd); // HACK for pawns
 }
 
 bit_t pseudo_attacks_from(int pc, int sd, int f)
@@ -1634,7 +1352,7 @@ bit_t pseudo_attacks_from(int pc, int sd, int f)
 
 bit_t pseudo_attacks_to(int pc, int sd, int t)
 {
-	return pseudo_attacks_from(pc, side::opposit(sd), t); // HACK for pawns
+	return pseudo_attacks_from(pc, side::opposite(sd), t); // HACK for pawns
 }
 
 bit_t slider_pseudo_attacks_to(int sd, int t, const board::Board & bd)
@@ -1675,7 +1393,7 @@ bool is_attacked(int t, int sd, const board::Board & bd)
 
 	// non-sliders
 
-	if ((bd.piece(piece::PAWN, sd) & Pawn_Attacks[side::opposit(sd)][t]) != 0) { // HACK
+	if ((bd.piece(piece::PAWN, sd) & Pawn_Attacks[side::opposite(sd)][t]) != 0) { // HACK
 		return true;
 	}
 
@@ -1723,7 +1441,7 @@ bit_t pinned_by(int t, int sd, const board::Board & bd)
 void init_attacks(Attacks & attacks, int sd, const board::Board & bd)   // for strictly-legal moves
 {
 
-	int atk = side::opposit(sd);
+	int atk = side::opposite(sd);
 	int def = sd;
 
 	int t = bd.king(def);
@@ -1773,7 +1491,7 @@ bool is_legal(const board::Board & bd)
 {
 
 	int atk = bd.turn();
-	int def = side::opposit(atk);
+	int def = side::opposite(atk);
 
 	return !is_attacked(bd.king(def), atk, bd);
 }
@@ -1782,7 +1500,7 @@ bool is_in_check(const board::Board & bd)
 {
 
 	int atk = bd.turn();
-	int def = side::opposit(atk);
+	int def = side::opposite(atk);
 
 	return is_attacked(bd.king(atk), def, bd);
 }
@@ -2154,7 +1872,7 @@ void add_pawn_captures(List & ml, int sd, bit_t ts, const board::Board & bd)
 {
 
 	bit_t pawns = bd.piece(piece::PAWN, sd);
-	ts &= bd.side(side::opposit(sd)); // not needed
+	ts &= bd.side(side::opposite(sd)); // not needed
 
 	if (sd == side::WHITE) {
 
@@ -2288,7 +2006,7 @@ void add_en_passant(List & ml, int sd, const board::Board & bd)
 
 	if (t != square::NONE) {
 
-		bit_t fs = bd.piece(piece::PAWN, sd) & attack::Pawn_Attacks[side::opposit(sd)][t];
+		bit_t fs = bd.piece(piece::PAWN, sd) & attack::Pawn_Attacks[side::opposite(sd)][t];
 
 		for (bit_t b = fs; b != 0; b = bit::rest(b)) {
 			int f = bit::first(b);
@@ -2312,7 +2030,7 @@ bool can_castle(int sd, int wg, const board::Board & bd)
 		assert(bd.square_is(kf, piece::KING, sd));
 		assert(bd.square_is(rf, piece::ROOK, sd));
 
-		return attack::line_is_empty(kf, rf, bd) && !attack::is_attacked(rt, side::opposit(sd), bd);
+		return attack::line_is_empty(kf, rf, bd) && !attack::is_attacked(rt, side::opposite(sd), bd);
 	}
 
 	return false;
@@ -2381,7 +2099,7 @@ void add_piece_moves_rare(List & ml, int sd, bit_t ts, const board::Board & bd) 
 void add_captures(List & ml, int sd, const board::Board & bd)
 {
 
-	bit_t ts = bd.side(side::opposit(sd));
+	bit_t ts = bd.side(side::opposite(sd));
 
 	add_pawn_captures(ml, sd, ts, bd);
 	add_piece_moves_rare(ml, sd, ts, bd);
@@ -2392,7 +2110,7 @@ void add_captures_mvv_lva(List & ml, int sd, const board::Board & bd)   // unuse
 {
 
 	for (int pc = piece::QUEEN; pc >= piece::PAWN; pc--) {
-		for (bit_t b = bd.piece(pc, side::opposit(sd)); b != 0; b = bit::rest(b)) {
+		for (bit_t b = bd.piece(pc, side::opposite(sd)); b != 0; b = bit::rest(b)) {
 			int t = bit::first(b);
 			add_captures_to(ml, sd, t, bd);
 		}
@@ -2538,12 +2256,12 @@ void add_checks(List & ml, int sd, const board::Board & bd)
 {
 
 	int atk = sd;
-	int def = side::opposit(sd);
+	int def = side::opposite(sd);
 
 	int king = bd.king(def);
 	bit_t pinned = attack::pinned_by(king, atk, bd);
 	bit_t empty = bd.empty();
-	empty &= ~attack::pawn_attacks_from(side::opposit(sd), bd); // pawn-safe
+	empty &= ~attack::pawn_attacks_from(side::opposite(sd), bd); // pawn-safe
 
 	// discovered checks
 
@@ -3001,7 +2719,7 @@ bit_t passed_opp[square::SIZE][side::SIZE];
 
 bool is_passed(int sq, int sd, const board::Board & bd)
 {
-	return (bd.piece(piece::PAWN, side::opposit(sd)) & passed_opp[sq][sd]) == 0
+	return (bd.piece(piece::PAWN, side::opposite(sd)) & passed_opp[sq][sd]) == 0
 		   && (bd.piece(piece::PAWN, sd) & passed_me[sq][sd]) == 0;
 }
 
@@ -3062,7 +2780,7 @@ private:
 			p_all = 0; // HACK: erase all attackers
 		}
 
-		p_side = side::opposit(p_side);
+		p_side = side::opposite(p_side);
 
 		return val;
 	}
@@ -3316,7 +3034,7 @@ bool is_legal(int mv, board::Board & bd, const attack::Attacks & attacks)
 	}
 
 	if (piece(mv) == piece::KING) {
-		return !attack::is_attacked(t, side::opposit(sd), bd);
+		return !attack::is_attacked(t, side::opposite(sd), bd);
 	}
 
 	if (!bit::is_set(attacks.pinned, f)) {
@@ -3353,7 +3071,7 @@ bool is_check(int mv, board::Board & bd)
 	int pc = (prom(mv) != piece::NONE) ? prom(mv) : piece(mv);
 	int sd = bd.square_side(f);
 
-	int king = bd.king(side::opposit(sd));
+	int king = bd.king(side::opposite(sd));
 
 	if (attack::attack(pc, sd, t, king, bd)) {
 		return true;
@@ -4171,14 +3889,14 @@ bool is_controlled(int sq, int sd, const board::Board & bd)
 {
 
 	bit_t attackers = bd.piece(piece::PAWN, sd) & attack::pawn_attacks_to(sd, sq);
-	bit_t defenders = bd.piece(piece::PAWN, side::opposit(sd)) & attack::pawn_attacks_to(side::opposit(sd), sq);
+	bit_t defenders = bd.piece(piece::PAWN, side::opposite(sd)) & attack::pawn_attacks_to(side::opposite(sd), sq);
 
 	return bit::count_loop(attackers) > bit::count_loop(defenders);
 }
 
 bool is_safe(int sq, int sd, const board::Board & bd)
 {
-	return is_empty(sq, bd) && !is_controlled(sq, side::opposit(sd), bd);
+	return is_empty(sq, bd) && !is_controlled(sq, side::opposite(sd), bd);
 }
 
 bit_t potential_attacks(int sq, int sd, const board::Board & bd)
@@ -4286,7 +4004,7 @@ bool is_doubled(int sq, int sd, const board::Board & bd)
 
 bool is_blocked(int sq, int sd, const board::Board & bd)
 {
-	return !is_safe(square::stop(sq, sd), sd, bd) && !is_attacked(sq, side::opposit(sd), bd);
+	return !is_safe(square::stop(sq, sd), sd, bd) && !is_attacked(sq, side::opposite(sd), bd);
 }
 
 int shelter_file(int fl, int sd, const board::Board & bd)
@@ -4391,11 +4109,11 @@ void comp_info(Info & info, const board::Board & bd)
 				if (rk >= square::RANK_5) {
 					int stop = square::stop(sq, sd);
 					if (is_duo(sq, sd, bd) && rk <= square::RANK_6) stop += square::pawn_inc(sd); // stop one line "later" for duos
-					bit::set(info.target[side::opposit(sd)], stop);
+					bit::set(info.target[side::opposite(sd)], stop);
 				}
 			}
 
-			safe[side::opposit(sd)] &= ~potential_attacks(sq, sd, bd);
+			safe[side::opposite(sd)] &= ~potential_attacks(sq, sd, bd);
 		}
 
 		for (int fl = 0; fl < square::FILE_SIZE; fl++) {
@@ -4435,7 +4153,7 @@ void comp_info(Info & info, const board::Board & bd)
 			if (false) {
 			} else if ((bd.piece(piece::PAWN, sd) & file) != 0) {
 				open = 0;
-			} else if ((bd.piece(piece::PAWN, side::opposit(sd)) & file) == 0) {
+			} else if ((bd.piece(piece::PAWN, side::opposite(sd)) & file) == 0) {
 				open = 4;
 			} else if ((strong & file) != 0) {
 				open = 1;
@@ -4625,7 +4343,7 @@ void comp_attacks(Attack_Info & ai, const board::Board & bd)
 	for (int sd = 0; sd < side::SIZE; sd++) {
 		int king = bd.king(sd);
 		bit_t ts = attack::pseudo_attacks_from(piece::KING, sd, king);
-		ai.king_evasions[sd] = ts & ~bd.side(sd) & ~ai.all_attacks[side::opposit(sd)];
+		ai.king_evasions[sd] = ts & ~bd.side(sd) & ~ai.all_attacks[side::opposite(sd)];
 	}
 
 	// pinned pieces
@@ -4634,7 +4352,7 @@ void comp_attacks(Attack_Info & ai, const board::Board & bd)
 
 	for (int sd = 0; sd < side::SIZE; sd++) {
 		int sq = bd.king(sd);
-		ai.pinned |= bd.side(sd) & attack::pinned_by(sq, side::opposit(sd), bd);
+		ai.pinned |= bd.side(sd) & attack::pinned_by(sq, side::opposite(sd), bd);
 	}
 }
 
@@ -4666,7 +4384,7 @@ int attack_mg_score(int pc, int sd, bit_t ts)
 	int c1 = bit::count(ts & centre_1);
 	int sc = c1 * 2 + c0;
 
-	sc += bit::count(ts & side_area[side::opposit(sd)]);
+	sc += bit::count(ts & side_area[side::opposite(sd)]);
 
 	return (sc - 4) * attack_weight[pc] / 2;
 }
@@ -4684,7 +4402,7 @@ int capture_score(int pc, int sd, bit_t ts, const board::Board & bd, const Attac
 
 	int sc = 0;
 
-	for (bit_t b = ts & bd.pieces(side::opposit(sd)); b != 0; b = bit::rest(b)) {
+	for (bit_t b = ts & bd.pieces(side::opposite(sd)); b != 0; b = bit::rest(b)) {
 
 		int t = bit::first(b);
 
@@ -4733,7 +4451,7 @@ int king_score(int sc, int n)
 bool passer_is_unstoppable(int sq, int sd, const board::Board & bd)
 {
 
-	if (!material::lone_king(side::opposit(sd), bd)) return false;
+	if (!material::lone_king(side::opposite(sd), bd)) return false;
 
 	int fl = square::file(sq);
 	bit_t front = bit::file(fl) & bit::front(sq, sd);
@@ -4742,7 +4460,7 @@ bool passer_is_unstoppable(int sq, int sd, const board::Board & bd)
 		return false;
 	}
 
-	if (pawn::square_distance(bd.king(side::opposit(sd)), sq, sd) >= 2) { // opponent king outside square
+	if (pawn::square_distance(bd.king(side::opposite(sd)), sq, sd) >= 2) { // opponent king outside square
 		return true;
 	}
 
@@ -4757,7 +4475,7 @@ int eval_passed(int sq, int sd, const board::Board & bd, const Attack_Info & ai)
 {
 
 	int fl = square::file(sq);
-	int xd = side::opposit(sd);
+	int xd = side::opposite(sd);
 
 	int weight = 4;
 
@@ -4801,7 +4519,7 @@ int eval_pawn_cap(int sd, const board::Board & bd, const Attack_Info & ai)
 
 	int sc = 0;
 
-	for (bit_t b = ts & bd.pieces(side::opposit(sd)); b != 0; b = bit::rest(b)) {
+	for (bit_t b = ts & bd.pieces(side::opposite(sd)); b != 0; b = bit::rest(b)) {
 
 		int t = bit::first(b);
 
@@ -4823,7 +4541,7 @@ bool has_minor(int sd, const board::Board & bd)
 int draw_mul(int sd, const board::Board & bd, const pawn::Info & pi)
 {
 
-	int xd = side::opposit(sd);
+	int xd = side::opposite(sd);
 
 	int pawn[side::SIZE];
 	pawn[side::WHITE] = bd.count(piece::PAWN, side::WHITE);
@@ -4843,7 +4561,7 @@ int draw_mul(int sd, const board::Board & bd, const pawn::Info & pi)
 			int prom = (sd == side::WHITE) ? square::A8 : square::A1;
 
 			if (square::distance(bd.king(xd), prom) <= 1) {
-				if (b == 0 || !square::same_colour(bit::first(b), prom)) {
+				if (b == 0 || !square::same_color(bit::first(b), prom)) {
 					return 1;
 				}
 			}
@@ -4855,7 +4573,7 @@ int draw_mul(int sd, const board::Board & bd, const pawn::Info & pi)
 			int prom = (sd == side::WHITE) ? square::H8 : square::H1;
 
 			if (square::distance(bd.king(xd), prom) <= 1) {
-				if (b == 0 || !square::same_colour(bit::first(b), prom)) {
+				if (b == 0 || !square::same_color(bit::first(b), prom)) {
 					return 1;
 				}
 			}
@@ -4893,12 +4611,12 @@ int draw_mul(int sd, const board::Board & bd, const pawn::Info & pi)
 		return 8;
 	}
 
-	if (material::lone_bishop(side::WHITE, bd) && material::lone_bishop(side::BLACK, bd) && std::abs(pawn[side::WHITE] - pawn[side::BLACK]) <= 2) { // opposit-colour bishops
+	if (material::lone_bishop(side::WHITE, bd) && material::lone_bishop(side::BLACK, bd) && std::abs(pawn[side::WHITE] - pawn[side::BLACK]) <= 2) { // opposite-color bishops
 
 		int wb = bit::first(bd.piece(piece::BISHOP, side::WHITE));
 		int bb = bit::first(bd.piece(piece::BISHOP, side::BLACK));
 
-		if (!square::same_colour(wb, bb)) {
+		if (!square::same_color(wb, bb)) {
 			return 8;
 		}
 	}
@@ -4917,7 +4635,7 @@ int check_number(int pc, int sd, bit_t ts, int king, const board::Board & bd)
 
 	assert(pc != piece::KING);
 
-	int xd = side::opposit(sd);
+	int xd = side::opposite(sd);
 	bit_t checks = ts & ~bd.side(sd) & attack::pseudo_attacks_to(pc, sd, king);
 
 	if (!piece::is_slider(pc)) {
@@ -4962,7 +4680,7 @@ int comp_eval(const board::Board & bd, pawn::Table & pawn_table)   // NOTE: scor
 
 	for (int sd = 0; sd < side::SIZE; sd++) {
 
-		int xd = side::opposit(sd);
+		int xd = side::opposite(sd);
 
 		int my_king = bd.king(sd);
 		int op_king = bd.king(xd);
