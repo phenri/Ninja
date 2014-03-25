@@ -5127,7 +5127,7 @@ void move(Search_Local & sl, int mv);
 void undo(Search_Local & sl);
 int eval(Search_Local & sl);
 int extension(Search_Local & sl, int mv, int depth, bool pv_node);
-static int reduction(Search_Local & sl, int mv, int depth, bool pv_node, bool in_check, int searched_size, bool dangerous);
+static int reduction(int depth, int searched_size, bool dangerous, int ext);
 void gen_sort(Search_Local & sl, gen::List & ml);
 
 void sg_abort ();
@@ -5680,10 +5680,7 @@ void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int be
 		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd) || move::is_castling(mv) || move::is_pawn_push(mv, bd);
 
 		int ext = extension(sl, mv, depth, pv_node);
-		int red = reduction(sl, mv, depth, pv_node, in_check, searched_size, dangerous); // LMR
-
-		if (ext != 0) red = 0;
-		assert(ext == 0 || red == 0);
+		int red = reduction(depth, searched_size, dangerous, ext);
 
 		int sc;
 		PV npv;
@@ -5930,10 +5927,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 		}
 
 		int ext = extension(sl, mv, depth, pv_node);
-		int red = reduction(sl, mv, depth, pv_node, in_check, searched.size(), dangerous); // LMR
-
-		if (ext != 0) red = 0;
-		assert(ext == 0 || red == 0);
+		int red = reduction(depth, searched.size(), dangerous, ext);
 
 		int sc;
 		PV npv;
@@ -6115,10 +6109,7 @@ void search_split_point(Search_Local & sl, Split_Point & sp)
 		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd) || move::is_castling(mv) || move::is_pawn_push(mv, bd);
 
 		int ext = extension(sl, mv, depth, pv_node);
-		int red = reduction(sl, mv, depth, pv_node, in_check, searched_size, dangerous); // LMR
-
-		if (ext != 0) red = 0;
-		assert(ext == 0 || red == 0);
+		int red = reduction(depth, searched_size, dangerous, ext);
 
 		int sc;
 		PV npv;
@@ -6328,14 +6319,20 @@ int extension(Search_Local & sl, int mv, int depth, bool pv_node)
 	}
 }
 
-int reduction(Search_Local & /* sl */, int /* mv */, int depth, bool /* pv_node */, bool /* in_check */, int searched_size, bool dangerous)
+int reduction(int depth, int searched_size, bool dangerous, int ext)
 {
-
 	int red = 0;
 
-	if (depth >= 3 && searched_size >= 3 && !dangerous) {
-		red = (searched_size >= 6) ? depth / 3 : 1;
+	if (searched_size >= 1 && !dangerous) {
+		red = 1;
+		int idx = 3 + 8 / depth;
+		red += (searched_size >= idx) + (searched_size >= 3 * idx);
 	}
+
+	// make sure the reduced depth will be at least 1
+	int new_depth = depth + ext - 1;
+	if (new_depth - red <= 0)
+		red = std::max(0, new_depth - 1);
 
 	return red;
 }
