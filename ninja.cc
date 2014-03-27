@@ -51,22 +51,20 @@ enum Move {NONE = 0};
 
 int make_flags(int pc, int cp, int pp = piece::NONE)
 {
-
-	assert(pc < piece::SIZE);
-	assert(cp < piece::SIZE);
-	assert(pp < piece::SIZE);
+	assert(piece::ok(pc));
+	assert(piece::ok(cp));
+	assert(piece::ok(pp));
 
 	return (pc << 6) | (cp << 3) | pp;
 }
 
 int make(int f, int t, int pc, int cp, int pp = piece::NONE)
 {
-
-	assert(f < square::SIZE);
-	assert(t < square::SIZE);
-	assert(pc < piece::SIZE);
-	assert(cp < piece::SIZE);
-	assert(pp < piece::SIZE);
+	assert(square::ok(f));
+	assert(square::ok(t));
+	assert(piece::ok(pc));
+	assert(piece::ok(cp));
+	assert(piece::ok(pp));
 
 	assert(pc != piece::NONE);
 	assert(pp == piece::NONE || pc == piece::PAWN);
@@ -445,7 +443,7 @@ const int p_phase[piece::SIZE] = { PAWN_PHASE, KNIGHT_PHASE, BISHOP_PHASE, ROOK_
 
 int phase(int pc)
 {
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 	return p_phase[pc];
 }
 
@@ -519,19 +517,19 @@ public:
 	}
 
 	bit_t piece(int pc) const {
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
 		return p_piece[pc];
 	}
 
 	bit_t piece(int pc, int sd) const {
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
 		return p_piece[pc] & p_side[sd];
 	}
 
 	int count(int pc, int sd) const {
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
 		return bit::count(piece(pc, sd));
 	}
@@ -562,13 +560,13 @@ public:
 	}
 
 	bool square_is(int sq, int pc, int sd) const {
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
 		return square(sq) == pc && square_side(sq) == sd;
 	}
 
 	int king(int sd) const {
-		assert(sd < side::SIZE);
+		assert(side::ok(sd));
 		return bit::first(piece(piece::KING, sd));
 	}
 
@@ -668,9 +666,9 @@ public:
 
 	void clear_square(int pc, int sd, int sq, bool update_copy) {
 
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
-		assert(sq >= 0 && sq < square::SIZE);
+		assert(sq >= 0 && square::ok(sq));
 
 		assert(pc == p_square[sq]);
 
@@ -697,9 +695,9 @@ public:
 
 	void set_square(int pc, int sd, int sq, bool update_copy) {
 
-		assert(pc < piece::SIZE);
+		assert(piece::ok(pc));
 		assert(pc != piece::NONE);
-		assert(sq >= 0 && sq < square::SIZE);
+		assert(sq >= 0 && square::ok(sq));
 
 		assert(!bit::is_set(p_piece[pc], sq));
 		bit::set(p_piece[pc], sq);
@@ -1124,13 +1122,13 @@ bit_t ray(int f, int t)
 
 bool pawn_move(int sd, int f, int t, const board::Board & bd)
 {
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	return bit::is_set(Pawn_Moves[sd][f], t) && line_is_empty(f, t, bd);
 }
 
 bool pawn_attack(int sd, int f, int t)
 {
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	return bit::is_set(Pawn_Attacks[sd][f], t);
 }
 
@@ -1142,7 +1140,7 @@ bool piece_attack(int pc, int f, int t, const board::Board & bd)
 
 bool attack(int pc, int sd, int f, int t, const board::Board & bd)
 {
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	if (pc == piece::PAWN) {
 		return pawn_attack(sd, f, t);
 	} else {
@@ -1153,7 +1151,7 @@ bool attack(int pc, int sd, int f, int t, const board::Board & bd)
 bit_t pawn_moves_from(int sd, const board::Board & bd)   // for pawn mobility
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	bit_t fs = bd.piece(piece::PAWN, sd);
 
@@ -1167,7 +1165,7 @@ bit_t pawn_moves_from(int sd, const board::Board & bd)   // for pawn mobility
 bit_t pawn_moves_to(int sd, bit_t ts, const board::Board & bd)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	assert((bd.all() & ts) == 0);
 
 	bit_t pawns = bd.piece(piece::PAWN, sd);
@@ -1189,7 +1187,7 @@ bit_t pawn_moves_to(int sd, bit_t ts, const board::Board & bd)
 bit_t pawn_attacks_from(int sd, const board::Board & bd)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	bit_t fs = bd.piece(piece::PAWN, sd);
 
@@ -1203,7 +1201,7 @@ bit_t pawn_attacks_from(int sd, const board::Board & bd)
 bit_t pawn_attacks_tos(int sd, bit_t ts)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	if (sd == side::WHITE) {
 		return (ts >> 9) | (ts << 7);
@@ -1214,13 +1212,13 @@ bit_t pawn_attacks_tos(int sd, bit_t ts)
 
 bit_t pawn_attacks_from(int sd, int f)
 {
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	return Pawn_Attacks[sd][f];
 }
 
 bit_t pawn_attacks_to(int sd, int t)
 {
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 	return pawn_attacks_from(side::opposite(sd), t);
 }
 
@@ -1286,7 +1284,7 @@ bit_t pseudo_attacks_to(int pc, int sd, int t)
 bit_t slider_pseudo_attacks_to(int sd, int t, const board::Board & bd)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	bit_t b = 0;
 	b |= bd.piece(piece::BISHOP, sd) & Piece_Attacks[piece::BISHOP][t];
@@ -1436,7 +1434,7 @@ bool is_in_check(const board::Board & bd)
 bit_t pawn_moves_debug(int sd, int sq)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	bit_t b = 0;
 
@@ -1461,7 +1459,7 @@ bit_t pawn_moves_debug(int sd, int sq)
 bit_t pawn_attacks_debug(int sd, int sq)
 {
 
-	assert(sd < side::SIZE);
+	assert(side::ok(sd));
 
 	bit_t b = 0;
 
@@ -2511,7 +2509,6 @@ public:
 	void store(hash_t key, int depth, int ply, int move, int score, int flags) {
 
 		assert(depth >= 0 && depth < 100);
-		assert(move != move::NONE);
 		assert(score >= score::MIN && score <= score::MAX);
 
 		score = score::to_trans(score, ply);
@@ -3544,13 +3541,13 @@ int phase_weight[TOTAL_PHASE + 1];
 
 int power(int pc)
 {
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 	return p_power[pc];
 }
 
 int score(int pc, int stage)
 {
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 	assert(stage < stage::SIZE);
 	return p_score[pc][stage];
 }
@@ -4290,7 +4287,7 @@ int passed_score(int sc, int rk)
 
 int mobility_score(int /* pc */, bit_t ts)
 {
-	// assert(pc < piece::SIZE);
+	// assert(piece::ok(pc));
 	int mob = bit::count(ts);
 	return mul_shift(20, mob_weight[mob], 8);
 }
@@ -4298,7 +4295,7 @@ int mobility_score(int /* pc */, bit_t ts)
 int attack_mg_score(int pc, int sd, bit_t ts)
 {
 
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 
 	int c0 = bit::count(ts & centre_0);
 	int c1 = bit::count(ts & centre_1);
@@ -4311,14 +4308,14 @@ int attack_mg_score(int pc, int sd, bit_t ts)
 
 int attack_eg_score(int pc, int sd, bit_t ts, const pawn::Info & pi)
 {
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 	return bit::count(ts & pi.target[sd]) * attack_weight[pc] * 4;
 }
 
 int capture_score(int pc, int sd, bit_t ts, const board::Board & bd, const Attack_Info & ai)
 {
 
-	assert(pc < piece::SIZE);
+	assert(piece::ok(pc));
 
 	int sc = 0;
 

@@ -5,7 +5,8 @@ namespace side {
 
 enum {WHITE, BLACK, SIZE};
 
-int opposite(int sd);
+extern bool ok(int sd);
+extern int opposite(int sd);
 
 }
 
@@ -34,31 +35,33 @@ enum {
 	DOUBLE_PAWN_DELTA = 2,
 };
 
-int make(int fl, int rk);
-int make(int fl, int rk, int sd);
-int file(int sq);
-int rank(int sq);
-int rank(int sq, int sd);
-int opposit_file(int sq);
-int opposit_rank(int sq);
-bool is_promotion(int sq);
-int color(int sq);
-bool same_color(int s0, int s1);
-bool same_line(int s0, int s1);
-int file_distance(int s0, int s1);
-int rank_distance(int s0, int s1);
-int distance(int s0, int s1);
-int pawn_inc(int sd);
-int stop(int sq, int sd);
-int promotion(int sq, int sd);
+extern bool ok(int sq);
 
-bool is_valid_88(int s88);
-int to_88(int sq);
-int from_88(int s88);
+extern int make(int fl, int rk);
+extern int make(int fl, int rk, int sd);
+extern int file(int sq);
+extern int rank(int sq);
+extern int rank(int sq, int sd);
+extern int opposit_file(int sq);
+extern int opposit_rank(int sq);
+extern bool is_promotion(int sq);
+extern int color(int sq);
+extern bool same_color(int s0, int s1);
+extern bool same_line(int s0, int s1);
+extern int file_distance(int s0, int s1);
+extern int rank_distance(int s0, int s1);
+extern int distance(int s0, int s1);
+extern int pawn_inc(int sd);
+extern int stop(int sq, int sd);
+extern int promotion(int sq, int sd);
 
-int from_fen(int sq);
-int from_string(const std::string & s);
-std::string to_string(int sq);
+extern bool is_valid_88(int s88);
+extern int to_88(int sq);
+extern int from_88(int s88);
+
+extern int from_fen(int sq);
+extern int from_string(const std::string & s);
+extern std::string to_string(int sq);
 
 }	// namespace square
 
@@ -94,18 +97,20 @@ static const int KING_VALUE   = 10000; // for SEE
 static const std::string Char = "PNBRQK?";
 static const std::string Fen_Char = "PpNnBbRrQqKk";
 
-bool is_minor(int pc);
-bool is_major(int pc);
-bool is_slider(int pc);
-int score(int pc);
-int value(int pc);
-int make(int pc, int sd);
-int piece(int p12);
-int side(int p12);
-int from_char(char c);
-char to_char(int pc);
-int from_fen(char c);
-char to_fen(int p12);
+extern bool ok(int pc);
+
+extern bool is_minor(int pc);
+extern bool is_major(int pc);
+extern bool is_slider(int pc);
+extern int score(int pc);
+extern int value(int pc);
+extern int make(int pc, int sd);
+extern int piece(int p12);
+extern int side(int p12);
+extern int from_char(char c);
+extern char to_char(int pc);
+extern int from_fen(char c);
+extern char to_fen(int p12);
 
 }	// namespace piece
 
