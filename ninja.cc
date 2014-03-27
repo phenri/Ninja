@@ -5752,7 +5752,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 			sc = -qs_static(sl, -beta + 1, 100);
 		} else { // dynamic
 			PV npv;
-			sc = -search(sl, depth - 3 - 1, -beta, -beta + 1, npv);
+			sc = -search(sl, depth - (3 + depth/4), -beta, -beta + 1, npv);
 		}
 
 		bd.undo_null(); // TODO: use sl?
