@@ -46,7 +46,7 @@ bit_t p_side_rear[side::SIZE][8];
 
 bit_t bit(int n)
 {
-	assert(n < 64);
+	assert(square::ok(n));
 	return 1ULL << n;
 }
 
@@ -63,6 +63,12 @@ void clear(bit_t & b, int n)
 bool is_set(bit_t b, int n)
 {
 	return (b & bit(n)) != 0;
+}
+
+void safe_set_bit(bit_t& b, int fl, int rk)
+{
+	if (square::file_ok(fl) && square::rank_ok(rk))
+		set(b, square::make(fl, rk));
 }
 
 int first(bit_t b)
@@ -1001,9 +1007,6 @@ struct Attacks {
 	bit_t pinned;
 };
 
-const int Pawn_Move[side::SIZE] = { +1, -1 };
-const int Pawn_Attack[side::SIZE][2] = { { -15, +17 }, { -17, +15 } };
-
 const int Knight_Inc[] = { -33, -31, -18, -14, +14, +18, +31, +33, 0 };
 const int Bishop_Inc[] = { -17, -15, +15, +17, 0 };
 const int Rook_Inc[]   = { -16, -1, +1, +16, 0 };
@@ -1340,54 +1343,10 @@ bool is_in_check(const board::Board & bd)
 	return is_attacked(bd.king(atk), def, bd);
 }
 
-bit_t pawn_moves_debug(int sd, int sq)
-{
-
-	assert(side::ok(sd));
-
-	bit_t b = 0;
-
-	int f = square::to_88(sq);
-	int inc = Pawn_Move[sd];
-
-	int t = f + inc;
-
-	if (square::is_valid_88(t)) {
-		bit::set(b, square::from_88(t));
-	}
-
-	if (square::rank(sq, sd) == square::RANK_2) {
-		t += inc;
-		assert(square::is_valid_88(t));
-		bit::set(b, square::from_88(t));
-	}
-
-	return b;
-}
-
-bit_t pawn_attacks_debug(int sd, int sq)
-{
-
-	assert(side::ok(sd));
-
-	bit_t b = 0;
-
-	int f = square::to_88(sq);
-
-	for (int dir = 0; dir < 2; dir++) {
-		int t = f + Pawn_Attack[sd][dir];
-		if (square::is_valid_88(t)) {
-			bit::set(b, square::from_88(t));
-		}
-	}
-
-	return b;
-}
-
 bit_t piece_attacks_debug(int pc, int sq)
 {
-
-	assert(pc != piece::PAWN);
+	assert(piece::ok(pc) && pc != piece::PAWN);
+	assert(square::ok(sq));
 
 	bit_t b = 0;
 
@@ -1493,11 +1452,14 @@ bit_t blockers_debug(int pc, int f)
 
 void init()
 {
-
 	for (int sd = 0; sd < side::SIZE; sd++) {
 		for (int sq = 0; sq < square::SIZE; sq++) {
-			Pawn_Moves[sd][sq] = pawn_moves_debug(sd, sq);
-			Pawn_Attacks[sd][sq] = pawn_attacks_debug(sd, sq);
+			int fl = square::file(sq), rk = square::rank(sq);
+			int sgn = sd == side::WHITE ? +1 : -1;
+
+			bit::safe_set_bit(Pawn_Moves[sd][sq], fl, rk + sgn);
+			bit::safe_set_bit(Pawn_Attacks[sd][sq], fl - 1, rk + sgn);
+			bit::safe_set_bit(Pawn_Attacks[sd][sq], fl + 1, rk + sgn);
 		}
 	}
 
