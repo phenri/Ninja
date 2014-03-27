@@ -36,6 +36,8 @@ enum {
 };
 
 extern bool ok(int sq);
+extern bool file_ok(int fl);
+extern bool rank_ok(int rk);
 
 extern int make(int fl, int rk);
 extern int make(int fl, int rk, int sd);

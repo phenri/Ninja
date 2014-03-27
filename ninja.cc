@@ -95,44 +95,44 @@ bool single(bit_t b)
 
 bit_t file(int fl)
 {
-	assert(fl < 8);
+	assert(square::file_ok(fl));
 	return 0xFFULL << (fl * 8);
 }
 
 bit_t rank(int rk)
 {
-	assert(rk < 8);
+	assert(square::rank_ok(rk));
 	return 0x0101010101010101ULL << rk;
 }
 
 bit_t files(int fl)
 {
-	assert(fl < 8);
+	assert(square::file_ok(fl));
 	bit_t file = bit::file(fl);
 	return (file << 8) | file | (file >> 8);
 }
 
 bit_t left(int fl)
 {
-	assert(fl < 8);
+	assert(square::file_ok(fl));
 	return p_left[fl];
 }
 
 bit_t right(int fl)
 {
-	assert(fl < 8);
+	assert(square::file_ok(fl));
 	return p_right[fl];
 }
 
 bit_t front(int rk)
 {
-	assert(rk < 8);
+	assert(square::rank_ok(rk));
 	return p_front[rk];
 }
 
 bit_t rear(int rk)
 {
-	assert(rk < 8);
+	assert(square::rank_ok(rk));
 	return p_rear[rk];
 }
 
@@ -3835,17 +3835,14 @@ bool is_blocked(int sq, int sd, const board::Board & bd)
 
 int shelter_file(int fl, int sd, const board::Board & bd)
 {
+	assert(square::file_ok(fl));
 
-	assert(fl >= 0 && fl < 8);
-
-	if (false) {
-	} else if (bd.square_is(square::make(fl, square::RANK_2, sd), piece::PAWN, sd)) {
+	if (bd.square_is(square::make(fl, square::RANK_2, sd), piece::PAWN, sd))
 		return 2;
-	} else if (bd.square_is(square::make(fl, square::RANK_3, sd), piece::PAWN, sd)) {
+	else if (bd.square_is(square::make(fl, square::RANK_3, sd), piece::PAWN, sd))
 		return 1;
-	} else {
+	else
 		return 0;
-	}
 }
 
 int shelter_files(int fl, int sd, const board::Board & bd)

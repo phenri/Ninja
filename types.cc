@@ -23,15 +23,26 @@ bool ok(int sq)
 	return 0 <= sq && sq < SIZE;
 }
 
+bool file_ok(int fl)
+{
+	return 0 <= fl && fl < FILE_SIZE;
+}
+
+bool rank_ok(int rk)
+{
+	return 0 <= rk && rk < RANK_SIZE;
+}
+
 int make(int fl, int rk)
 {
-	assert(fl < 8 && rk < 8);
+	assert(file_ok(fl) && rank_ok(rk));
 	return (fl << 3) | rk;
 }
 
 int make(int fl, int rk, int sd)
 {
-	assert(fl < 8 && rk < 8);
+	assert(file_ok(fl) && rank_ok(rk));
+	assert(side::ok(sd));
 	return make(fl, (rk ^ -sd) & 7);
 }
 
