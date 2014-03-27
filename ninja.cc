@@ -24,6 +24,7 @@
 #include "util.h"
 #include "input.h"
 #include "types.h"
+#include "move.h"
 
 // types
 
@@ -31,98 +32,6 @@ typedef uint64_t bit_t;
 typedef uint64_t hash_t; // key_t is used by Unix :(
 
 // modules
-
-namespace move
-{
-
-const int FLAGS_BITS = 9;
-const int FLAGS_SIZE = 1 << FLAGS_BITS;
-const int FLAGS_MASK = FLAGS_SIZE - 1;
-
-const int BITS = FLAGS_BITS + 12;
-const int SIZE = 1 << BITS;
-const int MASK = SIZE - 1;
-
-const int SCORE_BITS = 32 - BITS;
-const int SCORE_SIZE = 1 << SCORE_BITS;
-const int SCORE_MASK = SCORE_SIZE - 1;
-
-enum Move {NONE = 0};
-
-int make_flags(int pc, int cp, int pp = piece::NONE)
-{
-	assert(piece::ok(pc));
-	assert(piece::ok(cp));
-	assert(piece::ok(pp));
-
-	return (pc << 6) | (cp << 3) | pp;
-}
-
-int make(int f, int t, int pc, int cp, int pp = piece::NONE)
-{
-	assert(square::ok(f));
-	assert(square::ok(t));
-	assert(piece::ok(pc));
-	assert(piece::ok(cp));
-	assert(piece::ok(pp));
-
-	assert(pc != piece::NONE);
-	assert(pp == piece::NONE || pc == piece::PAWN);
-
-	return (pc << 18) | (cp << 15) | (pp << 12) | (f << 6) | t;
-}
-
-int from(int mv)
-{
-	assert(mv != NONE);
-	return (mv >> 6) & 077;
-}
-
-int to(int mv)
-{
-	assert(mv != NONE);
-	return mv & 077;
-}
-
-int piece(int mv)
-{
-	assert(mv != NONE);
-	return (mv >> 18) & 7;
-}
-
-int cap(int mv)
-{
-	assert(mv != NONE);
-	return (mv >> 15) & 7;
-}
-
-int prom(int mv)
-{
-	assert(mv != NONE);
-	return (mv >> 12) & 7;
-}
-
-int flags(int mv)
-{
-	assert(mv != NONE);
-	return (mv >> 12) & 0777;
-}
-
-std::string to_can(int mv)
-{
-	assert(mv != NONE);
-
-	std::string s;
-	s += square::to_string(from(mv));
-	s += square::to_string(to(mv));
-
-	if (prom(mv) != piece::NONE)
-		s += std::tolower(piece::to_char(prom(mv)));
-
-	return s;
-}
-
-}
 
 namespace bit
 {

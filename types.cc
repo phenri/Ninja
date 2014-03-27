@@ -173,6 +173,9 @@ const int wing::shelter_file[SIZE] = { square::FILE_G, square::FILE_B };
 
 namespace piece {
 
+const std::string Char = "PNBRQK?";
+const std::string Fen_Char = "PpNnBbRrQqKk";
+
 bool ok(int pc)
 {
 	return 0 <= pc && pc < SIZE;

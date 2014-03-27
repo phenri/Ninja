@@ -94,8 +94,8 @@ static const int ROOK_VALUE   = 500;
 static const int QUEEN_VALUE  = 975;
 static const int KING_VALUE   = 10000; // for SEE
 
-static const std::string Char = "PNBRQK?";
-static const std::string Fen_Char = "PpNnBbRrQqKk";
+extern const std::string Char;
+extern const std::string Fen_Char;
 
 extern bool ok(int pc);
 
