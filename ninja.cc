@@ -5382,7 +5382,6 @@ void init_sg()
 
 void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int beta)
 {
-
 	assert(depth > 0 && depth < MAX_DEPTH);
 	assert(alpha < beta);
 
@@ -5396,24 +5395,18 @@ void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int be
 	int old_alpha = alpha;
 
 	// transposition table
-
-	hash_t key = 0;
-
-	if (depth >= 0) {
-		key = bd.key();
-	}
+	hash_t key = bd.key();
 
 	// move loop
 
 	bool in_check = attack::is_in_check(bd);
-
 	int searched_size = 0;
 
 	for (int pos = 0; pos < ml.size(); pos++) {
-
 		int mv = ml.move(pos);
 
-		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd) || move::is_castling(mv) || move::is_pawn_push(mv, bd);
+		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd)
+			|| move::is_castling(mv) || move::is_pawn_push(mv, bd);
 
 		int ext = extension(sl, mv, depth, pv_node);
 		int red = reduction(depth, searched_size, dangerous, ext);
@@ -5426,18 +5419,18 @@ void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int be
 		move(sl, mv);
 
 		if ((pv_node && searched_size != 0) || red != 0) {
-
 			sc = -search(sl, depth + ext - red - 1, -alpha - 1, -alpha, npv);
 
 			if (sc > alpha) { // PVS/LMR re-search
-				move_fail_high();
-				sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				if (depth > 0)
+					sc = -search(sl, depth + ext - 1, -alpha - 1, -alpha, npv);
+				if (sc > alpha && (depth <= 0 || pv_node)) {
+					move_fail_high();
+					sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				}
 			}
-
-		} else {
-
+		} else
 			sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
-		}
 
 		undo(sl);
 
@@ -5671,17 +5664,18 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 		move(sl, mv);
 
 		if ((pv_node && searched.size() != 0) || red != 0) {
-
 			sc = -search(sl, depth + ext - red - 1, -alpha - 1, -alpha, npv);
 
 			if (sc > alpha) { // PVS/LMR re-search
-				sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				if (depth > 0)
+					sc = -search(sl, depth + ext - 1, -alpha - 1, -alpha, npv);
+				if (sc > alpha && (depth <= 0 || pv_node)) {
+					move_fail_high();
+					sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				}
 			}
-
-		} else {
-
+		} else
 			sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
-		}
 
 		undo(sl);
 
@@ -5836,13 +5830,13 @@ void search_split_point(Search_Local & sl, Split_Point & sp)
 		int searched_size = sp.searched_size();
 		sp.unlock();
 
-		if (mv == move::NONE) {
+		if (mv == move::NONE)
 			break;
-		}
 
 		assert(alpha < beta);
 
-		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd) || move::is_castling(mv) || move::is_pawn_push(mv, bd);
+		bool dangerous = in_check || move::is_tactical(mv) || move::is_check(mv, bd)
+			|| move::is_castling(mv) || move::is_pawn_push(mv, bd);
 
 		int ext = extension(sl, mv, depth, pv_node);
 		int red = reduction(depth, searched_size, dangerous, ext);
@@ -5853,17 +5847,18 @@ void search_split_point(Search_Local & sl, Split_Point & sp)
 		move(sl, mv);
 
 		if ((pv_node && searched_size != 0) || red != 0) {
-
 			sc = -search(sl, depth + ext - red - 1, -alpha - 1, -alpha, npv);
 
 			if (sc > alpha) { // PVS/LMR re-search
-				sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				if (depth > 0)
+					sc = -search(sl, depth + ext - 1, -alpha - 1, -alpha, npv);
+				if (sc > alpha && (depth <= 0 || pv_node)) {
+					move_fail_high();
+					sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
+				}
 			}
-
-		} else {
-
+		} else
 			sc = -search(sl, depth + ext - 1, -beta, -alpha, npv);
-		}
 
 		undo(sl);
 
