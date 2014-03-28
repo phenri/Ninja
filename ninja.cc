@@ -28,171 +28,13 @@
 #include "input.h"
 #include "types.h"
 #include "move.h"
+#include "bit.h"
 
 // types
 
-typedef uint64_t bit_t;
 typedef uint64_t hash_t; // key_t is used by Unix :(
 
 // modules
-
-namespace bit
-{
-
-bit_t p_left[8];
-bit_t p_right[8];
-bit_t p_front[8];
-bit_t p_rear[8];
-
-bit_t p_side_front[side::SIZE][8];
-bit_t p_side_rear[side::SIZE][8];
-
-bit_t bit(int n)
-{
-	assert(square::ok(n));
-	return 1ULL << n;
-}
-
-void set(bit_t & b, int n)
-{
-	b |= bit(n);
-}
-
-void clear(bit_t & b, int n)
-{
-	b &= ~bit(n);
-}
-
-bool is_set(bit_t b, int n)
-{
-	return (b & bit(n)) != 0;
-}
-
-void safe_set_bit(bit_t& b, int fl, int rk)
-{
-	if (square::file_ok(fl) && square::rank_ok(rk))
-		set(b, square::make(fl, rk));
-}
-
-int first(bit_t b)
-{
-	assert(b != 0);
-	return __builtin_ctzll(b); // GCC
-}
-
-bit_t rest(bit_t b)
-{
-	assert(b != 0);
-	return b & (b - 1);
-}
-
-int count(bit_t b)
-{
-	return __builtin_popcountll(b); // GCC
-}
-
-int count_loop(bit_t b)
-{
-	return __builtin_popcountll(b); // GCC
-}
-
-bool single(bit_t b)
-{
-	assert(b != 0);
-	return rest(b) == 0;
-}
-
-bit_t file(int fl)
-{
-	assert(square::file_ok(fl));
-	return 0xFFULL << (fl * 8);
-}
-
-bit_t rank(int rk)
-{
-	assert(square::rank_ok(rk));
-	return 0x0101010101010101ULL << rk;
-}
-
-bit_t files(int fl)
-{
-	assert(square::file_ok(fl));
-	bit_t file = bit::file(fl);
-	return (file << 8) | file | (file >> 8);
-}
-
-bit_t left(int fl)
-{
-	assert(square::file_ok(fl));
-	return p_left[fl];
-}
-
-bit_t right(int fl)
-{
-	assert(square::file_ok(fl));
-	return p_right[fl];
-}
-
-bit_t front(int rk)
-{
-	assert(square::rank_ok(rk));
-	return p_front[rk];
-}
-
-bit_t rear(int rk)
-{
-	assert(square::rank_ok(rk));
-	return p_rear[rk];
-}
-
-bit_t front(int sq, int sd)
-{
-	int rk = square::rank(sq);
-	return p_side_front[sd][rk];
-}
-
-bit_t rear(int sq, int sd)
-{
-	int rk = square::rank(sq);
-	return p_side_rear[sd][rk];
-}
-
-void init()
-{
-
-	{
-		bit_t bf = 0;
-		bit_t br = 0;
-
-		for (int i = 0; i < 8; i++) {
-			p_left[i] = bf;
-			p_rear[i] = br;
-			bf |= file(i);
-			br |= rank(i);
-		}
-	}
-
-	{
-		bit_t bf = 0;
-		bit_t br = 0;
-
-		for (int i = 7; i >= 0; i--) {
-			p_right[i] = bf;
-			p_front[i] = br;
-			bf |= file(i);
-			br |= rank(i);
-		}
-	}
-
-	for (int rk = 0; rk < 8; rk++) {
-		p_side_front[side::WHITE][rk] = front(rk);
-		p_side_front[side::BLACK][rk] = rear(rk);
-		p_side_rear [side::WHITE][rk] = rear(rk);
-		p_side_rear [side::BLACK][rk] = front(rk);
-	}
-}
-
-}
 
 namespace hash
 {
@@ -3682,7 +3524,7 @@ bool is_controlled(int sq, int sd, const board::Board & bd)
 	bit_t attackers = bd.piece(piece::PAWN, sd) & attack::pawn_attacks_to(sd, sq);
 	bit_t defenders = bd.piece(piece::PAWN, side::opposite(sd)) & attack::pawn_attacks_to(side::opposite(sd), sq);
 
-	return bit::count_loop(attackers) > bit::count_loop(defenders);
+	return bit::count(attackers) > bit::count(defenders);
 }
 
 bool is_safe(int sq, int sd, const board::Board & bd)
@@ -4427,13 +4269,13 @@ int check_number(int pc, int sd, bit_t ts, int king, const board::Board & bd)
 	bit_t checks = ts & ~bd.side(sd) & attack::pseudo_attacks_to(pc, sd, king);
 
 	if (!piece::is_slider(pc)) {
-		return bit::count_loop(checks);
+		return bit::count(checks);
 	}
 
 	int n = 0;
 
 	bit_t b = checks & attack::pseudo_attacks_to(piece::KING, xd, king); // contact checks
-	n += bit::count_loop(b) * 2;
+	n += bit::count(b) * 2;
 	checks &= ~b;
 
 	for (bit_t b = checks; b != 0; b = bit::rest(b)) {

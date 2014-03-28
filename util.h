@@ -53,17 +53,17 @@ class Waitable
 	std::condition_variable_any p_cond;
 
 public:
-	void lock() const { p_mutex.lock(); }
-	void unlock() const { p_mutex.unlock(); }
+	void lock() const;
+	void unlock() const;
 
-	void wait() { p_cond.wait(p_mutex); }
-	void signal() { p_cond.notify_one(); }
+	void wait();
+	void signal();
 };
 
 class PRNG
 {
 	uint64_t a, b, c, d;	// 256-bit state
-	uint64_t rol(uint64_t x, uint64_t k) const;
+	uint64_t rol(uint64_t x, unsigned k) const;
 
 public:
 	PRNG();
