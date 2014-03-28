@@ -58,30 +58,6 @@ int Timer::elapsed() const
 	return p_running ? p_elapsed + time() : p_elapsed;
 }
 
-/* class Lockable */
-
-void Lockable::lock() const
-{
-	p_mutex.lock();
-}
-
-void Lockable::unlock() const
-{
-	p_mutex.unlock();
-}
-
-/* class Waitable */
-
-void Waitable::wait()
-{
-	p_cond.wait(p_mutex);
-}
-
-void Waitable::signal()
-{
-	p_cond.notify_one();
-}
-
 /* class PRNG */
 
 uint64_t PRNG::rol(uint64_t x, uint64_t k) const

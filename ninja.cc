@@ -21,6 +21,9 @@
 #include <sstream>
 #include <vector>
 
+#include <mutex>
+#include <thread>
+
 #include "util.h"
 #include "input.h"
 #include "types.h"
@@ -4861,8 +4864,6 @@ struct Current {
 	int pos;
 	int size;
 	bool fail_high;
-
-	int last_time;
 };
 
 struct Best {
@@ -4877,24 +4878,11 @@ Time p_time;
 Current current;
 Best best;
 
-class Search_Global : public util::Lockable
-{
+trans::Table trans;
+sort::History history;
 
-public:
-
-	trans::Table trans;
-	sort::History history;
-
-};
-
-Search_Global sg;
-
-class SMP : public util::Lockable
-{
-
-};
-
-SMP smp;
+std::mutex ui;	// lock to prevent interleaving of UI display
+std::mutex smp;	// lock to prevent concurrent search splits
 
 class Search_Local;
 class Split_Point;
@@ -4927,11 +4915,9 @@ void          sl_push       (Search_Local & sl, Split_Point & sp);
 void          sl_pop        (Search_Local & sl);
 Split_Point & sl_top        (const Search_Local & sl);
 
-class Split_Point : public util::Lockable
+class Split_Point : public std::mutex
 {
-
 private:
-
 	Search_Local * p_master;
 	Split_Point * p_parent;
 
@@ -4953,7 +4939,6 @@ private:
 	PV p_pv;
 
 public:
-
 	void init_root(Search_Local & master) {
 
 		p_master = &master;
@@ -5195,8 +5180,6 @@ void clear()
 	current.size = 0;
 	current.fail_high = false;
 
-	current.last_time = 0;
-
 	best.depth = 0;
 	best.move = move::NONE;
 	best.score = score::NONE;
@@ -5227,8 +5210,7 @@ void update_current()
 
 void write_pv(Best & best)
 {
-
-	sg.lock();
+	ui.lock();
 
 	std::cout << "info";
 	std::cout << " depth " << best.depth;
@@ -5247,37 +5229,7 @@ void write_pv(Best & best)
 	std::cout << " pv " << best.pv.to_can();
 	std::cout << std::endl;
 
-	sg.unlock();
-}
-
-void write_info()
-{
-
-	sg.lock();
-
-	std::cout << "info";
-	std::cout << " depth " << current.depth;
-	std::cout << " seldepth " << current.max_ply;
-	std::cout << " currmove " << move::to_can(current.move);
-	std::cout << " currmovenumber " << current.pos + 1;
-	std::cout << " nodes " << current.node;
-	std::cout << " time " << current.time;
-	if (current.speed != 0) std::cout << " nps " << current.speed;
-	std::cout << " hashfull " << sg.trans.used();
-	std::cout << std::endl;
-
-	sg.unlock();
-}
-
-void write_info_opt()
-{
-
-	int time = current.time;
-
-	if (time >= current.last_time + 1000) {
-		write_info();
-		current.last_time = time - time % 1000;
-	}
+	ui.unlock();
 }
 
 void depth_start(int depth)
@@ -5336,7 +5288,6 @@ void search_end()
 {
 	p_time.timer.stop();
 	update_current();
-	write_info();
 }
 
 void idle_loop(Search_Local & sl, Split_Point & wait_sp)
@@ -5426,7 +5377,7 @@ void send_work(Search_Local & worker, Split_Point & sp)
 
 void init_sg()
 {
-	sg.history.clear();
+	history.clear();
 }
 
 void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int beta)
@@ -5514,11 +5465,11 @@ void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int be
 				// ml.set_score(pos, sc); // not needed
 				ml.move_to_front(pos);
 
-				if (depth >= 0) {
-					sg.trans.store(key, depth, bd.ply(), mv, sc, score::FLAGS_LOWER);
-				}
+				if (depth >= 0)
+					trans.store(key, depth, bd.ply(), mv, sc, score::FLAGS_LOWER);
 
-				if (sc >= beta) return;
+				if (sc >= beta)
+					return;
 			}
 		}
 	}
@@ -5528,7 +5479,7 @@ void search_root(Search_Local & sl, gen::List & ml, int depth, int alpha, int be
 
 	if (depth >= 0) {
 		int flags = score::flags(bs, old_alpha, beta);
-		sg.trans.store(key, depth, bd.ply(), bm, bs, flags);
+		trans.store(key, depth, bd.ply(), bm, bs, flags);
 	}
 }
 
@@ -5586,7 +5537,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 		int score;
 		int flags;
 
-		if (sg.trans.retrieve(key, trans_depth, bd.ply(), trans_move, score, flags) && !pv_node) { // assigns trans_move #
+		if (trans.retrieve(key, trans_depth, bd.ply(), trans_move, score, flags) && !pv_node) { // assigns trans_move #
 			if (flags == score::FLAGS_LOWER && score >= beta)  return score;
 			if (flags == score::FLAGS_UPPER && score <= alpha) return score;
 			if (flags == score::FLAGS_EXACT) return score;
@@ -5628,7 +5579,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 		if (sc >= beta) {
 
 			if (use_trans) {
-				sg.trans.store(key, trans_depth, bd.ply(), move::NONE, sc, score::FLAGS_LOWER);
+				trans.store(key, trans_depth, bd.ply(), move::NONE, sc, score::FLAGS_LOWER);
 			}
 
 			return sc;
@@ -5691,7 +5642,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 	// move loop
 
 	gen_sort::List ml;
-	ml.init(depth, bd, attacks, trans_move, sl.killer, sg.history, use_fp);
+	ml.init(depth, bd, attacks, trans_move, sl.killer, history, use_fp);
 
 	gen::List searched;
 
@@ -5747,14 +5698,14 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 				alpha = sc;
 
 				if (use_trans) {
-					sg.trans.store(key, trans_depth, bd.ply(), mv, sc, score::FLAGS_LOWER);
+					trans.store(key, trans_depth, bd.ply(), mv, sc, score::FLAGS_LOWER);
 				}
 
 				if (sc >= beta) {
 
 					if (depth > 0 && !in_check && !move::is_tactical(mv)) {
 						sl.killer.add(mv, bd.ply());
-						sg.history.add(mv, searched, bd);
+						history.add(mv, searched, bd);
 					}
 
 					return sc;
@@ -5776,7 +5727,7 @@ int search(Search_Local & sl, int depth, int alpha, int beta, PV & pv)
 
 	if (use_trans) {
 		int flags = score::flags(bs, old_alpha, beta);
-		sg.trans.store(key, trans_depth, bd.ply(), bm, bs, flags);
+		trans.store(key, trans_depth, bd.ply(), bm, bs, flags);
 	}
 
 	return bs;
@@ -5854,12 +5805,12 @@ void master_split_point(Search_Local & sl, Split_Point & sp)
 
 	if (bs >= sp.beta() && depth > 0 && !attack::is_in_check(bd) && !move::is_tactical(bm)) {
 		sl.killer.add(bm, ply);
-		sg.history.add(bm, sp.searched(), bd);
+		history.add(bm, sp.searched(), bd);
 	}
 
 	if (depth >= 0) {
 		int flags = score::flags(bs, sp.old_alpha(), sp.beta());
-		sg.trans.store(bd.key(), depth, ply, bm, bs, flags);
+		trans.store(bd.key(), depth, ply, bm, bs, flags);
 	}
 }
 
@@ -5943,7 +5894,7 @@ int qs_static(Search_Local & sl, int beta, int gain)   // for static NMP
 	attack::init_attacks(attacks, bd);
 
 	gen_sort::List ml;
-	ml.init(-1, bd, attacks, move::NONE, sl.killer, sg.history, false); // QS move generator
+	ml.init(-1, bd, attacks, move::NONE, sl.killer, history, false); // QS move generator
 
 	bit_t done = 0;
 
@@ -6024,26 +5975,23 @@ void inc_node(Search_Local & sl)
 
 bool poll()
 {
-
-	write_info_opt();
-
-	sg.lock();
+	ui.lock();
 
 	if (!input::input.has_input()) {
-		sg.unlock();
+		ui.unlock();
 		return false;
 	}
 
 	std::string line;
 	bool eof = !input::input.get_line(line);
-	if (engine::engine.log) util::log(line);
+	if (engine::engine.log)
+		util::log(line);
 
-	sg.unlock();
+	ui.unlock();
 
-	if (false) {
-	} else if (eof) {
+	if (eof)
 		std::exit(EXIT_SUCCESS);
-	} else if (line == "isready") {
+	else if (line == "isready") {
 		std::cout << "readyok" << std::endl;
 		return false;
 	} else if (line == "stop") {
@@ -6053,16 +6001,14 @@ bool poll()
 		uci::infinite = false;
 		p_time.ponder = false;
 		return p_time.flag;
-	} else if (line == "quit") {
+	} else if (line == "quit")
 		std::exit(EXIT_SUCCESS);
-	}
 
 	return false;
 }
 
 void move(Search_Local & sl, int mv)
 {
-
 	board::Board & bd = sl.board;
 
 	inc_node(sl);
@@ -6342,7 +6288,7 @@ void search_go(const board::Board & bd)
 	clear();
 
 	init_sg();
-	sg.trans.inc_date();
+	trans.inc_date();
 
 	for (int id = 0; id < engine::engine.threads; id++) {
 		sl_init_early(p_sl[id], id);
@@ -6412,8 +6358,8 @@ void search_smart(const board::Board & bd, int moves, int64_t time, int64_t inc,
 
 void init()
 {
-	sg.trans.set_size(engine::engine.hash);
-	sg.trans.alloc();
+	trans.set_size(engine::engine.hash);
+	trans.alloc();
 }
 
 }
@@ -6558,7 +6504,7 @@ void command(Scanner & scan)
 
 		if (name == "Hash") {
 			engine::engine.hash = std::stoi(value);
-			search::sg.trans.set_size(engine::engine.hash);
+			search::trans.set_size(engine::engine.hash);
 		} else if (name == "Ponder")
 			engine::engine.ponder = util::to_bool(value);
 		else if (name == "Threads")
@@ -6569,7 +6515,7 @@ void command(Scanner & scan)
 			engine::engine.log = util::to_bool(value);
 
 	} else if (command == "ucinewgame")
-		search::sg.trans.clear();
+		search::trans.clear();
 
 	else if (command == "position") {
 		scan.add_keyword("fen");

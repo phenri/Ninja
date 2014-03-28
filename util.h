@@ -47,29 +47,22 @@ public:
 	int elapsed() const;
 };
 
-class Lockable
+class Waitable
 {
-protected: // HACK for Waitable::wait()
 	mutable std::mutex p_mutex;
-
-public:
-	void lock() const;
-	void unlock() const;
-};
-
-class Waitable : public Lockable
-{
 	std::condition_variable_any p_cond;
 
 public:
-	void wait();
-	void signal();
+	void lock() const { p_mutex.lock(); }
+	void unlock() const { p_mutex.unlock(); }
+
+	void wait() { p_cond.wait(p_mutex); }
+	void signal() { p_cond.notify_one(); }
 };
 
 class PRNG
 {
 	uint64_t a, b, c, d;	// 256-bit state
-
 	uint64_t rol(uint64_t x, uint64_t k) const;
 
 public:
